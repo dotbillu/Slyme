@@ -6,27 +6,22 @@ export const mapOptions: google.maps.MapOptions = {
   zoomControl: false,
   backgroundColor: "#000000",
   styles: [
-    // Base: Pitch black geometry for that "OLED" feel
     { elementType: "geometry", stylers: [{ color: "#000000" }] },
     
-    // Labels: Subtle Zinc-500 text with black strokes for contrast
     { elementType: "labels.text.stroke", stylers: [{ color: "#000000" }] },
     { elementType: "labels.text.fill", stylers: [{ color: "#71717a" }] },
 
-    // City Names: Slightly brighter (Zinc-300) so they are readable
     {
       featureType: "administrative.locality",
       elementType: "labels.text.fill",
       stylers: [{ color: "#d4d4d8" }],
     },
 
-    // Hiding Clutter
     { featureType: "poi", stylers: [{ visibility: "off" }] },
     { featureType: "transit", stylers: [{ visibility: "off" }] },
     { featureType: "administrative.land_parcel", stylers: [{ visibility: "off" }] },
     { featureType: "administrative.neighborhood", stylers: [{ visibility: "off" }] },
 
-    // Parks: Very dark zinc/green hint, or just keep dark
     {
       featureType: "poi.park",
       elementType: "geometry",
@@ -38,7 +33,6 @@ export const mapOptions: google.maps.MapOptions = {
       stylers: [{ color: "#3f3f46" }],
     },
 
-    // Roads: Zinc-900 (Dark Gray) - visible but subtle
     {
       featureType: "road",
       elementType: "geometry",
@@ -55,7 +49,6 @@ export const mapOptions: google.maps.MapOptions = {
       stylers: [{ color: "#52525b" }],
     },
 
-    // Highways: Zinc-800 (Slightly lighter gray)
     {
       featureType: "road.highway",
       elementType: "geometry",
@@ -72,7 +65,6 @@ export const mapOptions: google.maps.MapOptions = {
       stylers: [{ color: "#a1a1aa" }],
     },
 
-    // Water: Deep Zinc-950 (Almost black)
     {
       featureType: "water",
       elementType: "geometry",

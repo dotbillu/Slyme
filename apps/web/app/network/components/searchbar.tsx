@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useSetAtom } from "jotai";
 import { Search, Pencil, X } from "lucide-react";
-import { isNewChatModalOpenAtom } from "@/store";
+import { isNewChatModalOpenAtom } from "@store";
 
 interface SidebarSearchBarProps {
   searchTerm: string;

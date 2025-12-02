@@ -31,7 +31,7 @@ import {
   userAtom,
   messagesAtom,
   socketAtom,
-} from "@/store";
+} from "@store";
 
 const SCROLL_THRESHOLD = 200;
 

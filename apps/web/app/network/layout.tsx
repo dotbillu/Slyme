@@ -19,7 +19,7 @@ import {
   messagesAtom,
   selectedConversationAtom,
   socketAtom,
-} from "@/store";
+} from "@store";
 
 
 export default function NetworkLayout({

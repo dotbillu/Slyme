@@ -1,10 +1,8 @@
 "use client";
 
 import { SearchUser } from "@/lib/types";
-import { API_BASE_URL } from "@/lib/constants";
 import Image from "next/image";
 import Link from "next/link";
-import { User } from "lucide-react";
 import { getImageUrl } from "@/lib/utils";
 
 export default function UserResultCard({ user }: { user: SearchUser }) {

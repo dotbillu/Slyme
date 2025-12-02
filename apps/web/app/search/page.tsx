@@ -6,7 +6,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import useDebounce from "@/hooks/useDebounce";
 import { Search, Loader2 } from "lucide-react";
 import { API_BASE_URL } from "@/lib/constants";
-import { SearchResult, SearchUser, SearchGig, SearchRoom } from "@/lib/types"; // Make sure types are correct
+import { SearchResult, SearchUser, SearchGig, SearchRoom } from "@/lib/types";
 import UserResultCard from "./components/UserResultCard";
 import GigResultCard from "./components/GigResultCard";
 import RoomResultCard from "./components/RoomResultCard";
@@ -60,8 +60,7 @@ export default function SearchPage() {
   const allResults = data?.pages.flatMap((page) => page.results) || [];
 
   return (
-    <div className="flex-grow flex flex-col bg-black text-white min-h-full">
-      {/* 1. Search Bar Header */}
+    <div className="grow flex flex-col bg-black text-white min-h-full">
       <form
         onSubmit={handleSearchSubmit}
         className="sticky top-0 z-10 p-4 bg-black border-b border-zinc-800"
@@ -78,7 +77,6 @@ export default function SearchPage() {
         </div>
       </form>
 
-      {/* 2. Tabs */}
       <div className="flex sticky top-[81px] z-10 bg-black border-b border-zinc-800">
         {(["all", "people", "gigs", "rooms"] as TabType[]).map((tab) => (
           <button
@@ -97,7 +95,7 @@ export default function SearchPage() {
       </div>
 
       {/* 3. Results List */}
-      <div className="flex-grow">
+      <div className="grow">
         {isLoading && (
           <div className="flex justify-center items-center p-10">
             <Loader2 className="w-8 h-8 animate-spin text-white" />
@@ -107,7 +105,7 @@ export default function SearchPage() {
         {!isLoading && allResults.length === 0 && debouncedQuery && (
           <div className="p-10 text-center text-zinc-400">
             <h3 className="font-bold text-lg text-white">
-              No results for "{query}"
+              No results for {query}
             </h3>
             <p>Try searching for something else.</p>
           </div>
@@ -137,7 +135,6 @@ export default function SearchPage() {
                     room={item.data as SearchRoom}
                   />
                 );
-              // Add PostResultCard if you want posts on the "all" tab
               default:
                 return null;
             }

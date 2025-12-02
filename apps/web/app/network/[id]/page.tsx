@@ -7,9 +7,9 @@ import {
   userRoomsAtom,
   dmConversationsAtom,
   networkLoadingAtom,
-} from "@/store"; // Fixed import path
+} from "@store"; 
 import ChatPanel from "../components/ChatPanel";
-import { ChatMapRoom, SimpleUser } from "@lib/types"; // Fixed import path
+import { ChatMapRoom, SimpleUser } from "@lib/types";
 
 export default function NetworkChatPage({
   params,
@@ -25,13 +25,10 @@ export default function NetworkChatPage({
   const [loading] = useAtom(networkLoadingAtom);
 
   useEffect(() => {
-    // Wait for profile to load
     if (loading.profile) return;
     
-    // Avoid redundant updates
     if (selectedConversation?.data.id === conversationId) return;
 
-    // Logic to find conversation in User's Lists
     let foundConvo: any = null;
     let foundType: "room" | "dm" | null = null;
 
@@ -66,8 +63,5 @@ export default function NetworkChatPage({
     setSelectedConversation,
   ]);
 
-  // On this route, we just render the ChatPanel. 
-  // The Layout handles the Desktop Sidebar.
-  // On Mobile, this takes up the full screen.
   return <ChatPanel />;
 }

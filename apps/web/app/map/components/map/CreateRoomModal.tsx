@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAtom } from "jotai";
-import { userAtom } from "@/store";
+import { userAtom } from "@store";
 import { MapElement } from "./MapTypes";
 import { Loader2, X, Upload } from "lucide-react";
 import { API_BASE_URL } from "@/lib/constants";

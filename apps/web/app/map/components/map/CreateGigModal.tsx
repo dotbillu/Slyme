@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAtom } from "jotai";
-import { userAtom } from "@/store";
+import { userAtom } from "@store";
 import { GigElement, MapElement } from "./MapTypes";
 import { X, Loader2, Upload, Link, Search } from "lucide-react";
 import { API_BASE_URL } from "@/lib/constants";

@@ -5,7 +5,7 @@ import { useInfiniteQuery, InfiniteData } from '@tanstack/react-query';
 import { MessageType, SelectedConversation } from '@lib/types';
 import { API_BASE_URL } from '@lib/constants';
 import { useAtom } from 'jotai';
-import { userAtom } from '@/store';
+import { userAtom } from '@store';
 
 const MESSAGES_PER_PAGE = 30;
 

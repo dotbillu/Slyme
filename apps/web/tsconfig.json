@@ -18,7 +18,7 @@
         "./app/lib/types.ts"
       ],
       "@store": [
-        "./app/store.ts"
+        "./app/lib/store.ts"
       ],
       "@shared/*": [
         "./app/shared/*"

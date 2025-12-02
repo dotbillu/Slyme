@@ -29,7 +29,7 @@ import {
   sidebarTransitionLoadingAtom,
   followingListAtom,
   socketAtom,
-} from "@/store";
+} from "@store";
 import SidebarSkeleton from "../ui/SidebarSkeleton";
 
 function formatTimestamp(timestamp: string | null): string {

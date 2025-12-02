@@ -8,8 +8,8 @@ import useDebounce from "@hooks/useDebounce";
 import SearchResults from "./SearchResults";
 import { userAtom } from "@store";
 import { API_BASE_URL } from "@/lib/constants";
-import { useRouter } from "next/navigation"; // Import useRouter
-import { SearchResult } from "@/lib/types"; // Import from main types file
+import { useRouter } from "next/navigation";
+import { SearchResult } from "@/lib/types";
 
 const fetchSearch = async (
   query: string,
@@ -62,7 +62,6 @@ export default function SearchBar() {
     };
   }, [query]);
 
-  // --- NEW: Handle Enter key press ---
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && query.trim().length > 0) {
       e.preventDefault();
@@ -92,7 +91,7 @@ export default function SearchBar() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={handleKeyDown} // Add keydown listener
+          onKeyDown={handleKeyDown} 
           placeholder="Search..."
           onFocus={() => setIsFocused(true)}
           className="bg-transparent outline-none w-full placeholder:text-gray-400 text-black text-sm ml-1"

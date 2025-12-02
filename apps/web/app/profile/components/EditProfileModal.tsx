@@ -52,7 +52,6 @@ function ImageUploadField({
 }
 
 interface HiddenFileInputProps {
-  // Relaxed type to accept refs initialized with null
   inputRef: React.RefObject<HTMLInputElement | null>;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
@@ -62,7 +61,6 @@ function HiddenFileInput({ inputRef, onChange }: HiddenFileInputProps) {
     <input
       type="file"
       accept="image/*"
-      // Cast here to satisfy the intrinsic input ref requirement
       ref={inputRef as React.RefObject<HTMLInputElement>}
       onChange={onChange}
       className="hidden"

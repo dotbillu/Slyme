@@ -6,7 +6,7 @@ import {
   PageName,
   userAtom,
   totalUnseenConversationsAtom,
-} from "@/store";
+} from "@store";
 import { useAtom } from "jotai";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
@@ -30,10 +30,7 @@ export default function Navbar() {
 
   const [currentPage, setCurrentPage] = useAtom(CurrentPageAtom);
   const [loggedInUser] = useAtom(userAtom);
-  
-  // 1. Get the unseen count
   const [unseenCount] = useAtom(totalUnseenConversationsAtom);
-  // 2. Ref to track previous count for sound trigger logic
   const prevUnseenCountRef = useRef(unseenCount);
 
   const icons = [
@@ -43,17 +40,12 @@ export default function Navbar() {
     { name: "Network", Icon: Network },
     { name: "profile", Icon: User },
   ] as const;
-
-  // 3. Sound Effect Effect
   useEffect(() => {
-    // If count INCREASED (new message arrived) and is greater than 0
     if (unseenCount > prevUnseenCountRef.current && unseenCount > 0) {
-      // Create a sound file in your public folder named 'notification.mp3'
       const audio = new Audio("/notification.mp3"); 
-      audio.volume = 0.5; // Minimal sound volume
+      audio.volume = 0.5;
       audio.play().catch((err) => console.log("Audio interaction needed:", err));
     }
-    // Update ref for next render
     prevUnseenCountRef.current = unseenCount;
   }, [unseenCount]);
 
@@ -131,7 +123,6 @@ export default function Navbar() {
                 : "text-white hover:bg-zinc-800"
             }`}
           >
-            {/* 4. Notification Badge Logic */}
             {name === "Network" && unseenCount > 0 && (
               <div className="absolute top-2 right-2 -mt-1 -mr-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white ring-2 ring-black">
                 {unseenCount > 9 ? "9+" : unseenCount}

@@ -2,7 +2,7 @@
 
 import { Loader2, User, FileText, Briefcase, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { SearchResult } from "@/lib/types"; // Import from main types file
+import { SearchResult } from "@/lib/types";
 import Image from "next/image";
 import { API_BASE_URL } from "@/lib/constants";
 
@@ -113,7 +113,7 @@ export default function SearchResults({
             onClick={() => handleResultClick(item)}
             className="flex items-center p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100"
           >
-            <div className="flex-shrink-0 mr-3 w-6 h-6 flex items-center justify-center">
+            <div className="shrink-0 mr-3 w-6 h-6 flex items-center justify-center">
               <ResultIcon type={item.type} data={item.data} />
             </div>
             <div className="flex-1 min-w-0">

@@ -4,7 +4,7 @@ import { signIn, useSession } from "next-auth/react";
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAtom } from "jotai";
-import { userAtom } from "@/store";
+import { userAtom } from "@store";
 import { API_BASE_URL } from "@/lib/constants";
 import { User } from "@/lib/types";
 
@@ -37,11 +37,10 @@ export default function LoginPage() {
 
         const userData: User = await res.json();
         setUser(userData);
-        console.log("Sync successful");
 
         router.push("/home");
       } catch (err) {
-        console.error("Failed to sync user:", err);
+        console.error("error logging in :",err);
       }
     };
 
@@ -50,7 +49,6 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black">
-
       {!session?.user && (
         <button
           onClick={() => signIn("google")}

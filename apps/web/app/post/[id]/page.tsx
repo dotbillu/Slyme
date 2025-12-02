@@ -13,7 +13,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useAtom } from "jotai";
-import { userAtom } from "../../store";
+import { userAtom } from "@store";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";

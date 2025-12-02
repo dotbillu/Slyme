@@ -6,8 +6,8 @@ import { useSession, signOut } from "next-auth/react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useAtom } from "jotai"; // 1. Import useAtom
-import { userAtom } from "../store"; // 2. Import userAtom
+import { useAtom } from "jotai"; 
+import { userAtom } from "@store"; 
 
 export default function ProfilePageWrapper() {
   const [mounted, setMounted] = useState(false);

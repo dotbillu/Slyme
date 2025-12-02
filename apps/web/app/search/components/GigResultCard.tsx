@@ -4,7 +4,6 @@ import { SearchGig } from "@/lib/types";
 import Link from "next/link";
 import { Briefcase } from "lucide-react";
 import Image from "next/image";
-import { API_BASE_URL } from "@/lib/constants";
 import { getImageUrl } from "@/lib/utils";
 
 export default function GigResultCard({ gig }: { gig: SearchGig }) {
@@ -20,7 +19,7 @@ export default function GigResultCard({ gig }: { gig: SearchGig }) {
     <Link href={`/map?id=${gig.id}&type=gig`}>
       <div className="p-4 hover:bg-zinc-900 transition-colors">
         <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center mt-1">
+          <div className="shrink-0 w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center mt-1">
             {imageUrl ? (
               <Image
                 src={imageUrl}

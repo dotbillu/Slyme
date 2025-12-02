@@ -26,7 +26,7 @@ import {
   Post,
   UserProfile,
 } from "@types";
-import { userAtom } from "@/store";
+import { userAtom } from "@store";
 
 type LikeMutationContext = {
   previousActivity: unknown;

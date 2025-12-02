@@ -28,10 +28,8 @@ export default function ProfileGig({
         transition={{ duration: 0.2 }}
         className="p-4 border-b border-zinc-700 transition-colors hover:bg-white/5 cursor-pointer"
       >
-        {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            {/* Avatar */}
             {userImageUrl ? (
               <Image
                 src={getImageUrl(userImageUrl)}
@@ -45,7 +43,6 @@ export default function ProfileGig({
                 {userName[0]}
               </div>
             )}
-            {/* Name and Gig Type */}
             <div className="flex items-center gap-2">
               <p className="text-white font-bold">{userName}</p>
               <p className="text-zinc-400 text-sm">
@@ -62,12 +59,10 @@ export default function ProfileGig({
           )}
         </div>
 
-        {/* Gig Title */}
         <h3 className="text-lg font-bold text-white mt-2">{gig.title}</h3>
 
-        {/* Content */}
         {gig.description && (
-          <p className="text-zinc-200 whitespace-pre-wrap break-words line-clamp-8 mt-1">
+          <p className="text-zinc-200 whitespace-pre-wrap wrap-break-words line-clamp-8 mt-1">
             {gig.description}
           </p>
         )}

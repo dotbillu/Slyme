@@ -55,7 +55,7 @@ import {
   PostEntryProps,
   UserProfile,
 } from "@/lib/types";
-import { locationAtom, userAtom } from "@/store";
+import { locationAtom, userAtom } from "@store";
 import Feedbox from "./components/Feedbox";
 
 // -----------------------------------------------------------------------------

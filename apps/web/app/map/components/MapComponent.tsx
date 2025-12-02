@@ -11,7 +11,7 @@ import {
 import { useAtom } from "jotai";
 import { GoogleMap, useJsApiLoader, MarkerF } from "@react-google-maps/api";
 import { useSearchParams, useRouter } from "next/navigation";
-import { locationAtom, userAtom } from "@/store";
+import { locationAtom, userAtom } from "@store";
 import { Home, Star, MoreVertical, Plus, Check } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { getImageUrl, getHaversineDistanceInMeters } from "@/lib/utils";

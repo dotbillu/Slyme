@@ -5,7 +5,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { Image as LucideImage, MapPin, X } from "lucide-react";
 import { useAtom } from "jotai";
-import { userAtom, locationAtom } from "@/store";
+import { userAtom, locationAtom } from "@store";
 import { API_BASE_URL } from "@/lib/constants";
 import { Post } from "@/lib/types";
 
