@@ -51,8 +51,6 @@ interface AuthenticatedSocket extends Socket {
 }
 
 io.on("connection", (socket: AuthenticatedSocket) => {
-  console.log(`Socket connected: ${socket.id}`);
-
   socket.on("authenticate", async (userId: string) => {
     try {
       if (!userId) return;
@@ -72,15 +70,12 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       userRooms.forEach((room: any) => {
         socket.to(room.id).emit("user:status", user);
       });
-
-      console.log(`User ${userId} authenticated and set as online`);
     } catch (err: any) {
-      console.error("Authentication error:", err);
+      console.error("Authentication error");
     }
   });
 
   socket.on("join:rooms", (roomIds: string[]) => {
-    console.log(`User ${socket.id} joining rooms:`, roomIds);
     roomIds.forEach((id: string) => socket.join(id));
   });
 
@@ -105,7 +100,7 @@ io.on("connection", (socket: AuthenticatedSocket) => {
         socket.emit("dm:confirm", { tempId: data.tempId, message: msg });
         socket.to(data.recipientId).emit("dm:receive", msg);
       } catch (err: any) {
-        console.error("Error sending DM:", err);
+        console.error("Error sending DM");
       }
     },
   );
@@ -133,7 +128,7 @@ io.on("connection", (socket: AuthenticatedSocket) => {
           message: msg,
         });
       } catch (err: any) {
-        console.error("Error sending group message:", err);
+        console.error("Error sending group message");
       }
     },
   );
@@ -214,7 +209,7 @@ io.on("connection", (socket: AuthenticatedSocket) => {
           });
         }
       } catch (err: any) {
-        console.error("Error toggling reaction:", err);
+        console.error("Error toggling reaction");
       }
     },
   );
@@ -255,7 +250,7 @@ io.on("connection", (socket: AuthenticatedSocket) => {
           io.to(recipientId).emit("message:deleted", messageId);
         }
       } catch (err: any) {
-        console.error("Error deleting message:", err);
+        console.error("Error deleting message");
       }
     },
   );
@@ -297,7 +292,6 @@ io.on("connection", (socket: AuthenticatedSocket) => {
   );
 
   socket.on("disconnect", async () => {
-    console.log(`Socket disconnected: ${socket.id}`);
     if (socket.userId) {
       try {
         const user = await prisma.user.update({
@@ -314,33 +308,21 @@ io.on("connection", (socket: AuthenticatedSocket) => {
         userRooms.forEach((room: any) => {
           socket.to(room.id).emit("user:status", user);
         });
-        console.log(`User ${socket.userId} set as offline`);
       } catch (err: any) {
-        console.error("Error on disconnect:", err);
+        console.error("Error on disconnect");
       }
     }
   });
 });
 
 httpServer.listen(LISTENING_PORT, "0.0.0.0", () => {
-  console.log(`live on port :${LISTENING_PORT}`);
   if (process.env.NODE_ENV === "production" && SELF_URL) {
-    console.log(`Setting up keep-alive ping for ${SELF_URL}`);
     setInterval(
       async () => {
         try {
-          console.log(`Sending keep-alive ping to ${SELF_URL}/health`);
           const response = await fetch(`${SELF_URL}/health`);
-          if (response.ok) {
-            console.log("Keep-alive ping successful:", response.status);
-          } else {
-            console.warn(
-              "Keep-alive ping returned bad status:",
-              response.status,
-            );
-          }
         } catch (error) {
-          console.error("Keep-alive ping failed:", error);
+          console.error("Keep-alive ping failed");
         }
       },
       14 * 60 * 1000,

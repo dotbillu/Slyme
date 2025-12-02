@@ -9,7 +9,7 @@ import chatRoutes from "@chats";
 require("dotenv").config();
 
 const app = express();
-const PORT = process.env.HTTP_PORT || 3000;
+const PORT = process.env.HTTP_PORT || 3002;
 const SELF_URL = process.env.SERVER_LINK || `http://localhost:${PORT}`;
 
 app.use(cors());
