@@ -77,9 +77,9 @@ A robust, decoupled Node.js architecture handling API requests and real-time eve
     * **Storage:** Cloudinary (via Multer)
     * **Auth & Validation:** JSON Web Tokens (JWT) & Zod
 * **WebSocket Service** (`apps/ws-backend`):
-    * **Real-time:** Socket.io (Handling geospatial updates & room chats)
+    * **Real-time:** Socket.io (realtime communication between rooms and network)
 * **Media Service** (`apps/ws-backend(Under Construction)`):
-    * **Experimental:** WebRTC implementation for voice
+    * **Experimental:** WebRTC implementation for voice comms
 
 ### DevOps & Tooling
 * **Monorepo:** Turborepo (v2.5)
