@@ -1,7 +1,16 @@
 # Slyme
 
 <div align="center">
-  <img src="./media/slymelogo.png" alt="Slyme Logo" width="120" height="120" />
+  <div align="center">
+  <img 
+    src="./media/slymelogo.png" 
+    alt="Slyme Logo" 
+    width="120" 
+    height="120" 
+    style="border-radius: 23%;" 
+  />
+  <br />
+  </div>
   <br />
   <h3>Hyperlocal Social Action & Community Gamification</h3>
   <p>
