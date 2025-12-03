@@ -23,7 +23,6 @@
     "framer-motion": "^12.23.24",
     "jotai": "^2.15.1",
     "lucide-react": "^0.554.0",
-    "mapillary-js": "^4.1.2",
     "next": "^16.0.3",
     "next-auth": "^4.24.13",
     "postcss": "^8.5.6",

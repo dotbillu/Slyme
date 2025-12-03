@@ -1,81 +1,142 @@
-## Slyme
+# Slyme
 
-A modern, location-based social platform built with **Next.js**, **Leaflet.js**, and **Node.js**.
-Users can upload gigs to earn money, create rooms on the map, and interact through a social feed inspired by Twitter.
+<div align="center">
+  <img src="./media/slymelogo.png" alt="Slyme Logo" width="120" height="120" />
+  <br />
+  <h3>Hyperlocal Social Action & Community Gamification</h3>
+  <p>
+    <b>Connect locally. Act globally.</b>
+  </p>
+  
+  <a href="https://slyme-dotbillu.vercel.app"><strong>Live Demo</strong></a>
+  <br />
+  <br />
 
-## _under development_
+  ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=for-the-badge&logo=typescript&logoColor=white)
+  ![Next.js](https://img.shields.io/badge/Next.js-16.0-black?style=for-the-badge&logo=next.js&logoColor=white)
+  ![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+  ![Prisma](https://img.shields.io/badge/Prisma-6.0-2D3748?style=for-the-badge&logo=prisma&logoColor=white)
+  ![Turborepo](https://img.shields.io/badge/Turborepo-Enabled-EF4444?style=for-the-badge&logo=turborepo&logoColor=white)
+</div>
 
-## Features
+---
 
-- Interactive map with Google Maps
-- Create and join rooms tied to real-world locations
-- Post gigs that help users earn money or collaborate locally
-- social feed
-- Real-time room chats on map
-- will make it mobile-ready via Capacitor :)
+## About Slyme
+
+**Slyme** (Internal Code: *EcoSphere*) is a hyperlocal social platform designed to gamify community action and environmental impact. By leveraging a real-time geospatial engine, it visualizes local activity to connect users with their immediate surroundings.
+
+Whether it is coordinating an environmental drive, joining a location-based chat room, or picking up a local task for cash, Slyme bridges the gap between digital intent and real-world impact.
+
+> **Status:** Public Beta (10+ active users)
+
+---
+
+## Interface Preview
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><img src="./media/slyme.png" width="250" alt="Mobile View 1" /></td>
+      <td align="center"><img src="./media/slyme0.png" width="250" alt="Mobile View 2" /></td>
+      <td align="center"><img src="./media/slyme3.png" width="250" alt="Mobile View 4" /></td>
+    </tr>
+  </table>
+</div>
+
+---
+
+## Key Features
+
+* **Geospatial Engine:** Real-time visualization of active users, events, and tasks on the map.
+* **Dynamic Rooms:** Geolocation-based chat rooms that unlock when you are in range.
+* **'Gig' Marketplace:** A local feed for monetizing tasks (errands, help) and finding quick work.
+* **Environmental Drives:** Tools to coordinate and track community cleanups and eco-initiatives.
+* **Real-Time Feeds:** Shared community updates powered by WebSockets.
 
 ---
 
 ## Tech Stack
 
-### Frontend
+This project is a high-performance **Monorepo** built with **Turborepo** and **pnpm**.
 
-![Next.js](https://img.shields.io/badge/Next.js_15-000000?style=for-the-badge&logo=next.js&logoColor=white)
-![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+### Frontend (`apps/web`)
+A cutting-edge UI built for performance and smooth interactions.
+* **Framework:** Next.js 16 (App Router) & React 19
+* **Styling:** Tailwind CSS 4 & DaisyUI 5
+* **State Management:** Jotai (Atomic state) & TanStack Query v5
+* **Maps & Location:** `@react-google-maps/api` 
+* **UX/Animations:** Framer Motion (v12)
+* **Storage:** Dexie (IndexedDB wrapper)
+* **Icons:** Lucide React
 
-### Libraries
+### Backend Infrastructure
+A robust, decoupled Node.js architecture handling API requests and real-time events separately.
 
-![Jotai](https://img.shields.io/badge/Jotai-000000?style=for-the-badge&logo=react&logoColor=white)
-![Framer Motion](https://img.shields.io/badge/Framer_Motion-EF4444?style=for-the-badge&logo=framer&logoColor=white)
+* **HTTP Service** (`apps/http-backend`):
+    * **Runtime:** Node.js & Express 5
+    * **Database:** PostgreSQL managed via Prisma ORM (v6.18)
+    * **Storage:** Cloudinary (via Multer)
+    * **Auth & Validation:** JSON Web Tokens (JWT) & Zod
+* **WebSocket Service** (`apps/ws-backend`):
+    * **Real-time:** Socket.io (Handling geospatial updates & room chats)
+* **Media Service** (`apps/ws-backend(Under Construction)`):
+    * **Experimental:** WebRTC implementation for voice
 
-### Backend
-
-![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
-![Express](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white)
-![Prisma](https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white)
-![WebSocket](https://img.shields.io/badge/WebSocket-010101?style=for-the-badge&logo=socket.io&logoColor=white)
-
-### Tools
-
-![Turborepo](https://img.shields.io/badge/Turborepo-000000?style=for-the-badge&logo=turborepo&logoColor=white)
-![pnpm](https://img.shields.io/badge/pnpm-F69220?style=for-the-badge&logo=pnpm&logoColor=white)
-![Capacitor](https://img.shields.io/badge/Capacitor-119EFF?style=for-the-badge&logo=capacitor&logoColor=white)
-
----
-
-## Quick Start
-
-```bash
-# Clone and setup
-echo "dont clone it yet its incomplete"
-```
-
-Open [localhost:3000](http://localhost:3000)
+### DevOps & Tooling
+* **Monorepo:** Turborepo (v2.5)
+* **Package Manager:** pnpm (v9)
+* **Language:** TypeScript (v5.9)
 
 ---
 
-## Project Structure
+## Getting Started
 
-```
-ecosphere/
-├── apps/
-│   ├── ws-backend/          
-│   ├── web/            # Next.js frontend
-│   └── server/         # Node.js + Express backend
-└── packages/
-    ├── ui/             # Shared UI components
-    ├── utils/          # Common utility functions
-    ├── config/         # Shared config/env setup
-    └── types/          # Shared TypeScript types
-```
+### Prerequisites
+* Node.js >= 18
+* pnpm (`npm install -g pnpm`)
+
+
+### Installation
+
+1.  **Clone the repository**
+    ```bash
+    git clone [https://github.com/dotbillu/Slyme.git](https://github.com/dotbillu/Slyme.git)
+    cd Slyme
+    ```
+
+2.  **Install dependencies**
+    ```bash
+    pnpm i
+    ```
+
+3.  **Environment Setup**
+    Navigate to each application directory (e.g., `apps/web`, `apps/http-backend`). You will find an `.env.example` file in each folder.
+    * Copy the contents of `.env.example`.
+    * Create a new file named `.env` in the same directory.
+    * Paste the contents and fill in your specific credentials.
+
+4.  **Database Migration**
+    ```bash
+    pnpm db:migrate
+    ```
+
+5.  **Run Development Server**
+    This will start the Next.js frontend (port 3000) and Express backend (port 8080/default) concurrently using Turbo.
+    ```bash
+    pnpm dev
+    ```
+
+---
+
+## Contributing
+
+We are currently in **Beta**. If you find bugs or want to suggest features:
+1.  Fork the repo.
+2.  Create a feature branch.
+3.  Submit a Pull Request.
 
 ---
 
 ## License
 
-MIT License - more details later
-
+ISC License.
