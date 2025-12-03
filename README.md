@@ -2,20 +2,10 @@
 
 <div align="center">
   <div align="center">
-  <img 
-    src="./media/slymelogo.png" 
-    alt="Slyme Logo" 
-    width="120" 
-    height="120" 
-    style="border-radius: 23%;" 
-  />
+  <img src="./media/uslymelogo.png" alt="Slyme Logo" width="120" height="120" />
+</div>
   <br />
-  </div>
-  <br />
-  <h3>Hyperlocal Social Action & Community Gamification</h3>
-  <p>
-    <b>Connect locally. Act globally.</b>
-  </p>
+  <h3>Gamified hyperlocal social network.</h3>
   
   <a href="https://slyme-dotbillu.vercel.app"><strong>Live Demo</strong></a>
   <br />
@@ -32,7 +22,7 @@
 
 ## About Slyme
 
-**Slyme** (Internal Code: *EcoSphere*) is a hyperlocal social platform designed to gamify community action and environmental impact. By leveraging a real-time geospatial engine, it visualizes local activity to connect users with their immediate surroundings.
+**Slyme**  is a hyperlocal social platform designed to gamify community action and environmental impact. By leveraging a real-time geospatial engine, it visualizes local activity to connect users with their immediate surroundings.
 
 Whether it is coordinating an environmental drive, joining a location-based chat room, or picking up a local task for cash, Slyme bridges the gap between digital intent and real-world impact.
 
@@ -139,13 +129,14 @@ A robust, decoupled Node.js architecture handling API requests and real-time eve
 
 ## Contributing
 
-We are currently in **Beta**. If you find bugs or want to suggest features:
+We are currently in **Beta** and actively re-architecting our security layer to include **End-to-End Encryption** .
+
+If you want to contribute to the security overhaul, report bugs, or suggest features:
 1.  Fork the repo.
 2.  Create a feature branch.
 3.  Submit a Pull Request.
-
 ---
 
 ## License
 
-ISC License.
+This project is licensed under the **ISC License**. See the [LICENSE](./LICENSE) file for details.
