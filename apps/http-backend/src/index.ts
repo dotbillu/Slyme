@@ -23,7 +23,7 @@ app.use("/global", globalRoutes);
 app.use("/chat", chatRoutes);
 
 app.get("/activate", (req, res) => {
-  res.status(200).send("ok");
+  res.status(200).end();
 });
 
 app.listen(PORT, () => {
