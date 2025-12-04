@@ -9,14 +9,14 @@ import { API_BASE_URL } from "@/lib/constants";
 import { User } from "@/lib/types";
 
 export default function LoginPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [, setUser] = useAtom(userAtom);
 
   const isSyncing = useRef(false);
 
   useEffect(() => {
-    if (!session?.user || isSyncing.current) return;
+    if (status !== "authenticated" || !session?.user || isSyncing.current) return;
 
     const currentUser = session.user;
     isSyncing.current = true;
@@ -38,18 +38,19 @@ export default function LoginPage() {
         const userData: User = await res.json();
         setUser(userData);
 
-        router.push("/home");
+        router.replace("/home");
       } catch (err) {
-        console.error("error logging in :",err);
+        console.error("error logging in :", err);
+        isSyncing.current = false;
       }
     };
 
     syncUser();
-  }, [session, router, setUser]);
+  }, [session, status, router, setUser]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black">
-      {!session?.user && (
+      {!session?.user ? (
         <button
           onClick={() => signIn("google")}
           className="flex items-center bg-white text-black cursor-pointer px-6 py-3 rounded-md shadow-md hover:shadow-lg transition-shadow"
@@ -76,13 +77,10 @@ export default function LoginPage() {
               fill="#EA4335"
             />
           </svg>
-
           <span className="font-medium">Sign in with Google</span>
         </button>
-      )}
-
-      {session?.user && (
-        <span className="loading loading-infinity loading-xl"></span>
+      ) : (
+        <span className="loading loading-infinity loading-xl text-white"></span>
       )}
     </div>
   );

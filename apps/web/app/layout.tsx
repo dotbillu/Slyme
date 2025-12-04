@@ -3,6 +3,7 @@
 import { SessionProvider, useSession } from "next-auth/react";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { Analytics } from "@vercel/analytics/react";
 
 import Provider from "./Provider";
 import Navbar from "@shared/Navbar";
@@ -19,6 +20,7 @@ export default function RootLayout({
         <Provider>
           <SessionProvider>
             <AuthGuard>{children}</AuthGuard>
+            <Analytics />
           </SessionProvider>
         </Provider>
       </body>
@@ -31,15 +33,15 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const path = usePathname();
 
-  if (path.startsWith("/api/auth")) {
-    return <>{children}</>;
-  }
-
   useEffect(() => {
     if (status === "unauthenticated" && path !== "/login") {
       router.replace("/login");
     }
   }, [status, path, router]);
+
+  if (path?.startsWith("/api/auth")) {
+    return <>{children}</>;
+  }
 
   if (status === "loading") {
     return (
@@ -49,7 +51,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (status === "unauthenticated" && path === "/login") {
+  if (path === "/login") {
     return (
       <div className="bg-black h-dvh w-full flex flex-col overflow-y-auto">
         {children}
