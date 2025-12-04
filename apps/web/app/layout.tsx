@@ -3,7 +3,7 @@
 import { SessionProvider, useSession } from "next-auth/react";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Analytics } from "@vercel/analytics/react";
+import { Analytics } from "@vercel/analytics/next";
 
 import Provider from "./Provider";
 import Navbar from "@shared/Navbar";
