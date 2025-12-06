@@ -21,7 +21,6 @@ app.use("/map", mapRoutes);
 app.use("/search", searchRoutes);
 app.use("/global", globalRoutes);
 app.use("/chat", chatRoutes);
-
 app.get("/activate", (req, res) => {
   res.status(200).end();
 });

@@ -13,6 +13,7 @@ model User {
   username    String    @unique
   email       String    @unique
   image       String?
+  publicKey   String?   
   posterImage String?
   createdAt   DateTime  @default(now())
   isOnline    Boolean   @default(false)

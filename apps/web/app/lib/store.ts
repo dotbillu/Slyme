@@ -1,4 +1,4 @@
-import { atom } from "jotai";
+import { atom, WritableAtom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 import {
   User,
@@ -7,8 +7,10 @@ import {
   ChatMapRoom,
   SimpleUser,
   MessageType,
+  E2EEKeys,
 } from "@/lib/types";
 import { Socket } from "socket.io-client";
+
 export type PageName =
   | "Home"
   | "Map"
@@ -16,6 +18,7 @@ export type PageName =
   | "Network"
   | "Activity"
   | "profile";
+
 export const CurrentPageAtom = atom<PageName>("Home");
 
 interface LocationState {
@@ -26,11 +29,11 @@ interface LocationState {
 export const locationAtom = atom<LocationState>({ lat: null, lng: null });
 
 export const userAtom = atomWithStorage<User | null>("user", null);
-
+export const keysAtom = atomWithStorage<E2EEKeys | null>("E2EEKeys", null);
 export const followingListAtom = atomWithStorage<Following[]>(
   "followingList",
   [],
-);
+) as WritableAtom<Following[], [Following[]], void>;
 
 export const toggleFollowAtom = atom(null, (get, set, username: string) => {
   const user = get(userAtom);
@@ -39,13 +42,12 @@ export const toggleFollowAtom = atom(null, (get, set, username: string) => {
   const currentList = get(followingListAtom);
   const isFollowing = currentList.some((u) => u.username === username);
 
+  let newList: Following[];
+
   if (isFollowing) {
-    set(
-      followingListAtom,
-      currentList.filter((u) => u.username !== username),
-    );
+    newList = currentList.filter((u) => u.username !== username);
   } else {
-    set(followingListAtom, [
+    newList = [
       ...currentList,
       {
         id:
@@ -58,14 +60,18 @@ export const toggleFollowAtom = atom(null, (get, set, username: string) => {
         lastMessage: null,
         lastMessageTimestamp: null,
       },
-    ]);
+    ];
   }
+  set(followingListAtom, newList);
 });
 
 export const likePostAtom = atom(null, (get) => {
   const user = get(userAtom);
   if (!user) return;
 });
+
+const profileLoadingAtom = atom<boolean>(true);
+const messagesLoadingAtom = atom<boolean>(false);
 
 export const networkLoadingAtom = atom(
   (get) => ({
@@ -103,9 +109,4 @@ export const totalUnseenConversationsAtom = atom((get) => {
   return unseenRooms + unseenDms;
 });
 
-const profileLoadingAtom = atom<boolean>(true);
-const messagesLoadingAtom = atom<boolean>(false);
-
-
 export const socketAtom = atom<Socket | null>(null);
-

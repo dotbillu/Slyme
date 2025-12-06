@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Analytics } from "@vercel/analytics/next";
 
+import { v4 as uuidv4 } from "uuid";
 import Provider from "./Provider";
 import Navbar from "@shared/Navbar";
 import "./globals.css";
@@ -34,8 +35,10 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const path = usePathname();
 
   useEffect(() => {
-    if (status === "unauthenticated" && path !== "/login") {
-      router.replace("/login");
+    const isAuthRoute = path?.startsWith("/auth");
+
+    if (status === "unauthenticated" && !isAuthRoute) {
+      router.replace(`/auth/login`);
     }
   }, [status, path, router]);
 
@@ -45,13 +48,13 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (status === "loading") {
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center z-50 h-100 w-full">
+      <div className="fixed inset-0 bg-black flex items-center justify-center z-50 h-screen">
         <span className="loading loading-dots loading-xl text-white"></span>
       </div>
     );
   }
 
-  if (path === "/login") {
+  if (path?.startsWith("/auth")) {
     return (
       <div className="bg-black h-dvh w-full flex flex-col overflow-y-auto">
         {children}

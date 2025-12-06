@@ -7,15 +7,19 @@ export interface User {
   createdAt: string;
 }
 
+export interface E2EEKeys {
+  privateKey: string;
+  publicKey: string;
+}
 export interface Following {
   id: string;
   username: string;
   name: string;
   image: string | null;
-  lastMessage: string | null;        
+  lastMessage: string | null;
   lastMessageTimestamp: string | null;
-  isOnline?: boolean;           
-  unseenCount?: number;        
+  isOnline?: boolean;
+  unseenCount?: number;
 }
 
 export interface Post {
@@ -48,7 +52,7 @@ export interface Gig {
 export interface MapRoom {
   id: string;
   name: string;
-  createdAt:string,
+  createdAt: string;
   description: string | null;
   imageUrl: string | null;
   latitude: number;
@@ -97,17 +101,16 @@ export interface ChatMapRoom {
   type?: string | null;
 }
 
-export interface ChatUserProfile
-  extends Omit<
-    UserProfile,
-    | "email"
-    | "posterImage"
-    | "createdAt"
-    | "posts"
-    | "gigs"
-    | "rooms"
-    | "followers"
-  > {
+export interface ChatUserProfile extends Omit<
+  UserProfile,
+  | "email"
+  | "posterImage"
+  | "createdAt"
+  | "posts"
+  | "gigs"
+  | "rooms"
+  | "followers"
+> {
   rooms: ChatMapRoom[];
   following: SimpleUser[];
 }

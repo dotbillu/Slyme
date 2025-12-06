@@ -17,6 +17,9 @@
       "@maps": [
         "./src/routes/maps/index"
       ],
+      "@auth": [
+        "./src/routes/auth/index"
+      ],
       "@multer": [
         "./src/multer_file.ts"
       ]

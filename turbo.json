@@ -1,13 +1,19 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
-  "globalEnv": ["NEXTAUTH_SECRET", "NEXTAUTH_URL","SERVER_LINK"],
+  "globalEnv": ["NEXTAUTH_SECRET", "NEXTAUTH_URL", "SERVER_LINK"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**"],
-      "env": ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET","SERVER_LINK"]
+      "env": [
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "SERVER_LINK",
+        "FACEBOOK_CLIENT_ID",
+        "FACEBOOK_CLIENT_SECRET"
+      ]
     },
     "lint": {
       "dependsOn": ["^lint"]
@@ -23,7 +29,9 @@
         "GOOGLE_CLIENT_SECRET",
         "NEXTAUTH_SECRET",
         "NEXTAUTH_URL",
-        "SERVER_LINK"
+        "SERVER_LINK",
+        "FACEBOOK_CLIENT_ID",
+        "FACEBOOK_CLIENT_SECRET"
       ]
     }
   }
