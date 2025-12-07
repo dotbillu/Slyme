@@ -6,6 +6,7 @@ import mapRoutes from "@maps";
 import searchRoutes from "./routes/search";
 import globalRoutes from "./routes/global";
 import chatRoutes from "@chats";
+import authRoutes from "@auth";
 require("dotenv").config();
 
 const app = express();
@@ -21,6 +22,8 @@ app.use("/map", mapRoutes);
 app.use("/search", searchRoutes);
 app.use("/global", globalRoutes);
 app.use("/chat", chatRoutes);
+app.use("/auth", authRoutes);
+
 app.get("/activate", (req, res) => {
   res.status(200).end();
 });

@@ -14,6 +14,7 @@ model User {
   email       String    @unique
   image       String?
   publicKey   String?   
+  password    String?
   posterImage String?
   createdAt   DateTime  @default(now())
   isOnline    Boolean   @default(false)
