@@ -11,15 +11,11 @@ export async function POST(req: Request) {
   if (!session || !session.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  // Get both username and publicKey from the request body
   const { username, publicKey } = await req.json();
 
   if (!username) {
     return NextResponse.json({ error: "Username is required" }, { status: 400 });
   }
-
-  // Check uniqueness
   const existingUsername = await prisma.user.findUnique({
     where: { username },
   });
@@ -35,14 +31,14 @@ export async function POST(req: Request) {
       },
       update: {
         username: username,
-        publicKey: publicKey, // Update key if user exists
+        publicKey: publicKey, 
       },
       create: {
         email: session.user.email,
         name: session.user.name,
         image: session.user.image,
         username: username,
-        publicKey: publicKey, // Save key when creating new user
+        publicKey: publicKey,
       },
     });
 

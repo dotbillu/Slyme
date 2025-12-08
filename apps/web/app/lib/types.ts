@@ -5,6 +5,7 @@ export interface User {
   email: string;
   image?: string | null;
   createdAt: string;
+  publicKey?: string;
 }
 
 export interface E2EEKeys {

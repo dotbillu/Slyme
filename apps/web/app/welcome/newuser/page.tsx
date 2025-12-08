@@ -6,39 +6,38 @@ import { useState } from "react";
 import { useAtom } from "jotai";
 import { keysAtom } from "@/lib/store"; 
 import KeyGen from "@/lib/crypt"; 
-import {
-  Button,
-  TextField,
-  Stack,
-  Typography,
-  Alert,
-  Paper,
-  InputAdornment,
-  IconButton,
-  Stepper,
-  Step,
-  StepLabel,
-} from "@mui/material";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import DownloadIcon from "@mui/icons-material/Download";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import axios from "axios";
+import { 
+  CheckCircle2, 
+  Copy, 
+  Download, 
+  ArrowRight, 
+  ShieldCheck,
+  Loader2
+} from "lucide-react";
+
+const slideUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  exit: { opacity: 0, y: -20, transition: { duration: 0.3 } }
+};
 
 export default function Welcome() {
   const { data: session, update } = useSession();
   const router = useRouter();
   
-  const [activeStep, setActiveStep] = useState(0);
+  const [step, setStep] = useState(1);
   const [username, setUsername] = useState("");
   const [, setKeys] = useAtom(keysAtom);
   const [localKeys, setLocalKeys] = useState<{ publicKey: string; privateKey: string } | null>(null);
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const handleGenerateKeys = (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || username.length < 3) {
-      setError("Username must be at least 3 characters");
+      toast.error("Username must be at least 3 characters");
       return;
     }
 
@@ -46,14 +45,13 @@ export default function Welcome() {
       const generated = KeyGen();
       setLocalKeys(generated);
       setKeys(generated);
-      setError("");
-      setActiveStep(1);
+      setStep(2);
+      toast.success("Keys generated successfully");
     } catch (err) {
-      setError("Failed to generate encryption keys.",err);
+      toast.error(`Failed to generate encryption keys (${err})`);
     }
   };
 
-  // Step 2: Download Private Key
   const handleDownload = () => {
     if (!localKeys || !username) return;
 
@@ -64,13 +62,13 @@ export default function Welcome() {
     document.body.appendChild(element); 
     element.click();
     document.body.removeChild(element);
+    toast.success("Key file downloaded");
   };
 
   const handleCopy = () => {
     if (localKeys) {
       navigator.clipboard.writeText(localKeys.privateKey);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      toast.success("Private key copied");
     }
   };
 
@@ -78,158 +76,168 @@ export default function Welcome() {
     if (!localKeys || !username) return;
 
     setLoading(true);
-    setError("");
 
     try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: username,
-          publicKey: localKeys.publicKey, 
-        }),
+      await axios.post("/api/auth/register", {
+        username: username,
+        publicKey: localKeys.publicKey, 
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || data.message || "Failed to register user");
-      }
-
       await update({ isNewUser: false });
-
       router.replace("/home");
 
-  } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message);
-    } finally {
+      
+      if (axios.isAxiosError(err)) {
+        const message = err.response?.data?.error || err.response?.data?.message || "Failed to register user";
+        toast.error(message);
+      } else if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error("An unexpected error occurred");
+      }
+      
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center bg-black p-4">
-      <Stack spacing={4} sx={{ maxWidth: 500, width: "100%" }}>
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-black text-white p-6 relative overflow-hidden font-sans">
+      <div className="absolute inset-0 bg-[radial-gradient(#333_1px,transparent_1px)] bg-size:[20px_20px] opacity-20 pointer-events-none" />
+
+      <div className="z-10 w-full max-w-lg flex flex-col items-center gap-8">
         
-        {/* Header */}
-        <div className="text-center">
-          <Typography variant="h4" color="white" fontWeight="bold">
-            Welcome, {session?.user?.name?.split(" ")[0]}
-          </Typography>
-          <Typography color="gray" mt={1}>
+        <div className="text-center space-y-2">
+          <motion.h1 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-4xl font-bold tracking-tight"
+          >
+            Welcome, <span className="text-blue-500">{session?.user?.name?.split(" ")[0] || "Traveler"}</span>
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="text-zinc-500 text-lg"
+          >
             Let&apos;s set up your secure identity.
-          </Typography>
+          </motion.p>
         </div>
 
-        {/* Stepper Visual */}
-        <Stepper activeStep={activeStep} alternativeLabel sx={{ 
-            '& .MuiStepLabel-label': { color: 'gray' },
-            '& .MuiStepLabel-label.Mui-active': { color: 'white' },
-            '& .MuiStepLabel-label.Mui-completed': { color: '#4caf50' },
-        }}>
-          <Step><StepLabel>Choose Username</StepLabel></Step>
-          <Step><StepLabel>Secure Keys</StepLabel></Step>
-        </Stepper>
+        <div className="flex items-center gap-4 w-full max-w-xs mb-4">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${step >= 1 ? "bg-blue-600 text-white" : "bg-zinc-800 text-zinc-500"}`}>1</div>
+          <div className="h-0.5 flex-1 bg-zinc-800 relative">
+            <motion.div 
+              className="absolute inset-0 bg-blue-600" 
+              initial={{ width: "0%" }}
+              animate={{ width: step === 2 ? "100%" : "0%" }}
+              transition={{ duration: 0.5 }}
+            />
+          </div>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${step >= 2 ? "bg-blue-600 text-white" : "bg-zinc-800 text-zinc-500"}`}>2</div>
+        </div>
 
-        {/* Step 1: Username Input */}
-        {activeStep === 0 && (
-          <form onSubmit={handleGenerateKeys}>
-            <Stack spacing={3}>
-              <TextField
-                label="Choose a Username"
-                variant="outlined"
-                value={username}
-                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
-                fullWidth
-                required
-                autoFocus
-                error={!!error}
-                helperText={error}
-                sx={{
-                  input: { color: "white" },
-                  label: { color: "gray" },
-                  "& .MuiOutlinedInput-root": {
-                    "& fieldset": { borderColor: "gray" },
-                    "&:hover fieldset": { borderColor: "white" },
-                    "&.Mui-focused fieldset": { borderColor: "white" },
-                  },
-                }}
-              />
-              <Button 
-                type="submit" 
-                variant="contained" 
-                size="large"
-                sx={{ bgcolor: "white", color: "black", '&:hover': { bgcolor: '#e0e0e0'} }}
-              >
-                Generate Secure Keys
-              </Button>
-            </Stack>
-          </form>
-        )}
-
-        {/* Step 2: Key Management */}
-        {activeStep === 1 && localKeys && (
-          <Stack spacing={3}>
-            <Alert severity="warning" sx={{ bgcolor: 'rgba(237, 108, 2, 0.1)', color: '#ff9800' }}>
-              <strong>Do not lose this key!</strong> We cannot recover it for you.
-              Save it immediately.
-            </Alert>
-
-            <Paper sx={{ p: 2, bgcolor: "#111", border: "1px solid #333" }}>
-              <Typography variant="subtitle2" color="gray" mb={1}>
-                Your Private Key
-              </Typography>
-              <TextField
-                value={localKeys.privateKey}
-                fullWidth
-                multiline
-                rows={3}
-                variant="outlined"
-                InputProps={{
-                  readOnly: true,
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={handleCopy} color={copied ? "success" : "default"}>
-                         {copied ? <CheckCircleIcon /> : <ContentCopyIcon sx={{ color: 'white'}} />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  textarea: { color: "white", fontFamily: "monospace", fontSize: "0.8rem" },
-                  "& .MuiOutlinedInput-root fieldset": { border: "none" },
-                }}
-              />
-            </Paper>
+        <div className="w-full">
+          <AnimatePresence mode="wait">
             
-            <Stack direction="row" spacing={2}>
-              <Button
-                onClick={handleDownload}
-                variant="outlined"
-                startIcon={<DownloadIcon />}
-                fullWidth
-                sx={{ borderColor: "gray", color: "white", '&:hover': { borderColor: "white"} }}
+            {step === 1 && (
+              <motion.form 
+                key="step1" 
+                variants={slideUp} 
+                initial="hidden" 
+                animate="visible" 
+                exit="exit"
+                onSubmit={handleGenerateKeys}
+                className="space-y-6"
               >
-                Download Key
-              </Button>
-            </Stack>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-zinc-400 ml-1">Choose a unique username</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                      placeholder="username"
+                      className="w-full bg-zinc-900/50 border border-zinc-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 outline-none transition-all cursor-text"
+                      autoFocus
+                    />
+                    <ShieldCheck className="absolute right-3 top-3 w-5 h-5 text-zinc-600 pointer-events-none" />
+                  </div>
+                </div>
 
-            <Button 
-              onClick={handleFinalize} 
-              variant="contained" 
-              size="large"
-              disabled={loading}
-              sx={{ bgcolor: "white", color: "black", '&:hover': { bgcolor: '#e0e0e0'} }}
-            >
-              {loading ? "Creating Account..." : "I've Saved It, Start Journey"}
-            </Button>
-            
-            {error && <Typography color="error" textAlign="center">{error}</Typography>}
-          </Stack>
-        )}
+                <button 
+                  type="submit"
+                  className="w-full bg-white text-black font-bold rounded-xl py-3 hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2 group cursor-pointer"
+                >
+                  Generate Secure Keys
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </motion.form>
+            )}
 
-      </Stack>
+            {step === 2 && localKeys && (
+              <motion.div 
+                key="step2" 
+                variants={slideUp} 
+                initial="hidden" 
+                animate="visible" 
+                exit="exit" 
+                className="space-y-8 text-center"
+              >
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center ring-1 ring-green-500/20">
+                    <CheckCircle2 className="w-8 h-8 text-green-500" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">New Identity Created</h2>
+                    <p className="text-zinc-500 text-sm mt-1">Please save your new Private Key immediately.</p>
+                  </div>
+                </div>
+
+                <div className="relative group text-left">
+                   <div className="absolute -inset-0.5 bg-linear-to-r from-zinc-800 to-zinc-800 rounded-xl opacity-50 blur group-hover:opacity-75 transition duration-200"></div>
+                   <div className="relative flex items-center bg-black border border-zinc-800 rounded-xl p-1.5 pl-4">
+                      <code className="flex-1 font-mono text-xs text-zinc-400 truncate mr-2 select-all cursor-text">
+                        {localKeys.privateKey}
+                      </code>
+                      
+                      <div className="flex items-center gap-1 border-l border-zinc-800 pl-1">
+                        <button 
+                          onClick={handleCopy}
+                          className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                          title="Copy Key"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={handleDownload}
+                          className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                          title="Download Key"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </div>
+                   </div>
+                </div>
+
+                <div className="pt-2">
+                  <button 
+                    onClick={handleFinalize}
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white text-black rounded-xl hover:bg-zinc-200 transition-colors font-bold text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Continue"}
+                  </button>
+                </div>
+
+              </motion.div>
+            )}
+
+          </AnimatePresence>
+        </div>
+      </div>
     </div>
   );
 }

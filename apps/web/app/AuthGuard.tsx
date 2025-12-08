@@ -1,9 +1,8 @@
-
-import {  useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAtom } from "jotai";
-import { userAtom } from "@store";
+import { userAtom, keysAtom } from "@store";
 import { API_BASE_URL } from "@/lib/constants";
 import { User } from "@/lib/types";
 import Navbar from "@shared/Navbar";
@@ -14,6 +13,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const path = usePathname();
   const [user, setUser] = useAtom(userAtom);
+  const [keys] = useAtom(keysAtom);
   const isSyncing = useRef(false);
 
   useEffect(() => {
@@ -26,17 +26,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       try {
         const res = await fetch(
           `${API_BASE_URL}/auth/signin/oauth/${session.user.email}`,
-          {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-          }
+          { method: "GET", headers: { "Content-Type": "application/json" } }
         );
-
         if (!res.ok) {
           isSyncing.current = false;
           return;
         }
-
         const userData: User = await res.json();
         setUser(userData);
       } catch (err) {
@@ -44,33 +39,40 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         isSyncing.current = false;
       }
     };
-
     syncUser();
   }, [session, status, setUser, user]);
 
+  // --- ROUTING LOGIC ---
   useEffect(() => {
+    if (status === "loading") return;
 
     if (status === "unauthenticated") {
       router.replace(`/auth`);
+      return;
     }
-
     if (status === "authenticated" && session?.user?.isNewUser) {
       if (path !== "/welcome/newuser") {
         router.replace("/welcome/newuser");
       }
+      return;
     }
-  }, [status, path, router, session]);
+    if (
+      status === "authenticated" &&
+      !session?.user?.isNewUser &&
+      !keys && 
+      path !== "/welcome/back"
+    ) {
+      router.replace("/welcome/back");
+    }
+  }, [status, path, router, session, keys]);
 
-  if (path?.startsWith("/api/auth")) {
-    return <>{children}</>;
-  }
-
+  if (path?.startsWith("/api/auth")) return <>{children}</>;
   const isLoading =
     status === "loading" ||
     (status === "authenticated" &&
       !path?.startsWith("/auth") &&
       !path?.startsWith("/welcome") &&
-      !user);
+      (!user || !keys));
 
   if (isLoading) {
     return (
@@ -81,18 +83,13 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (path?.startsWith("/auth")) {
-    return (
-      <div className="bg-black h-dvh w-full flex flex-col overflow-y-auto">
-        {children}
-      </div>
-    );
+    return <div className="bg-black h-dvh w-full flex flex-col overflow-y-auto">{children}</div>;
   }
-
   if (path?.startsWith("/welcome")) {
     return <div className="h-dvh w-full bg-black">{children}</div>;
   }
 
-  if (session) {
+  if (session && keys) {
     return (
       <div className="bg-black relative h-dvh w-full overflow-hidden">
         <div className="h-full w-full overflow-y-auto pb-24">{children}</div>
