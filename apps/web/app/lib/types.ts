@@ -6,12 +6,14 @@ export interface User {
   image?: string | null;
   createdAt: string;
   publicKey?: string;
+  privateKey?: string; // Added for local user state
 }
 
 export interface E2EEKeys {
   privateKey: string;
   publicKey: string;
 }
+
 export interface Following {
   id: string;
   username: string;
@@ -21,6 +23,7 @@ export interface Following {
   lastMessageTimestamp: string | null;
   isOnline?: boolean;
   unseenCount?: number;
+  publicKey?: string; // Added to facilitate immediate encryption
 }
 
 export interface Post {
@@ -87,6 +90,7 @@ export interface SimpleUser {
   lastMessage: string | null;
   lastMessageTimestamp: string | null;
   unseenCount?: number;
+  publicKey?: string;
 }
 
 export interface ChatMapRoom {
@@ -131,6 +135,7 @@ export interface MessageBase {
   reactions: Reaction[];
   isOptimistic?: boolean;
   isRead?: boolean;
+  nonce?: string; // Added for E2EE
 }
 
 export interface DirectMessage extends MessageBase {

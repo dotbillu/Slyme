@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
-import KeyGen from "@/lib/crypt";
+import { KeyGen } from "@/lib/crypt";
 import axios from "axios";
 
 const slideUp = {

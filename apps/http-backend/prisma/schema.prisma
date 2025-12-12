@@ -139,6 +139,9 @@ model DirectMessage {
   createdAt DateTime @default(now())
   isRead    Boolean  @default(false)
 
+  senderPublicKey String? 
+  nonce String?
+
   sender   User     @relation("SentDMs", fields: [senderId], references: [id], onDelete: Cascade)
   senderId String
 

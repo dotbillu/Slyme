@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAtom } from "jotai";
 import { keysAtom } from "@/lib/store"; 
-import KeyGen from "@/lib/crypt"; 
+import {KeyGen} from "@/lib/crypt"; 
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import axios from "axios";

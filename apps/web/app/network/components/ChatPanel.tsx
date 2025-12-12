@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import React, { useEffect, useRef, useState, useLayoutEffect } from "react";
+import React, { useEffect, useRef, useState, useLayoutEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAtom } from "jotai";
 import { useRouter } from "next/navigation";
@@ -31,7 +31,11 @@ import {
   userAtom,
   messagesAtom,
   socketAtom,
+  keysAtom,
 } from "@store";
+
+// --- IMPORT ENCRYPTION LOGIC ---
+import { encryptMessage, decryptMessage } from "@/lib/crypt";
 
 const SCROLL_THRESHOLD = 200;
 
@@ -77,6 +81,7 @@ const toSimpleUser = (user: User): SimpleUser => ({
   isOnline: true,
   lastMessage: null,
   lastMessageTimestamp: null,
+  publicKey: user.publicKey, 
 });
 
 interface ExtendedMessageBubbleProps extends MessageBubbleProps {
@@ -284,6 +289,7 @@ MessageList.displayName = "MessageList";
 
 const ChatPanel: React.FC<ChatPanelProps> = () => {
   const [currentUser] = useAtom(userAtom);
+  const [keys] = useAtom(keysAtom); 
   const [selectedConversation] = useAtom(selectedConversationAtom);
   const [messages, setMessages] = useAtom(messagesAtom);
   const [error, setError] = useAtom(networkErrorAtom);
@@ -302,12 +308,64 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
 
   const selectedConversationRef = useRef(selectedConversation);
   const currentUserRef = useRef(currentUser);
+  
+  // Use Refs for Keys to access them inside socket listeners without stale closures
+  const keysRef = useRef(keys);
 
   useEffect(() => {
     selectedConversationRef.current = selectedConversation;
     currentUserRef.current = currentUser;
-  }, [selectedConversation, currentUser]);
+    keysRef.current = keys;
+  }, [selectedConversation, currentUser, keys]);
 
+  // --- ENCRYPTION HELPER ---
+  const decryptContent = useCallback((msg: MessageType, currentKeys?: any, currentUserData?: any): string => {
+    // 1. Get Private Key (Prefer passed keys, then ref, then object)
+    const privKey = currentKeys?.privateKey || keysRef.current?.privateKey || currentUserData?.privateKey;
+
+    if (msg.roomId || !msg.nonce || !privKey) {
+        return msg.content;
+    }
+    
+    // Determine the public key of the OTHER person
+    const meId = currentUserData?.id || currentUserRef.current?.id;
+    const isMeSender = msg.senderId === meId;
+    
+    let otherPublicKey = "";
+
+    // IMPORTANT: We use selectedConversationRef to be safe in async callbacks
+    const currentConvo = selectedConversationRef.current;
+
+    if (isMeSender) {
+        // If I sent it, decrypt using the Recipient's Public Key
+        if(currentConvo?.type === 'dm' && currentConvo.data.id === msg.recipientId) {
+            otherPublicKey = (currentConvo.data as SimpleUser).publicKey || "";
+        }
+    } else {
+        // If I received it, decrypt using the Sender's Public Key
+        if(currentConvo?.type === 'dm' && currentConvo.data.id === msg.senderId) {
+             otherPublicKey = (currentConvo.data as SimpleUser).publicKey || "";
+        } else {
+             otherPublicKey = msg.sender?.publicKey || "";
+        }
+    }
+
+    if (!otherPublicKey) return "Encrypted message";
+
+    try {
+        const decrypted = decryptMessage(
+            privKey, 
+            otherPublicKey, 
+            msg.content, 
+            msg.nonce
+        );
+        return decrypted || "Failed to decrypt";
+    } catch (e) {
+        return "Decryption Error";
+    }
+  }, []);
+
+  // Initial Load from DB (Cache)
   useEffect(() => {
     if (!selectedConversation || !currentUser) return;
 
@@ -345,7 +403,15 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
             (a, b) =>
               new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
           );
-          setMessages(cachedMsgs);
+          
+          // Decrypt loaded messages
+          const decryptedMsgs = cachedMsgs.map(msg => ({
+             ...msg,
+             content: decryptContent(msg as MessageType, keys, currentUser)
+          }));
+
+          setMessages(decryptedMsgs);
+          
           if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTop =
               scrollContainerRef.current.scrollHeight;
@@ -361,8 +427,9 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
     };
 
     loadFromCache();
-  }, [selectedConversation?.data.id, currentUser, setMessages]);
+  }, [selectedConversation?.data.id, currentUser, setMessages, decryptContent, keys]);
 
+  // Handle messages fetched via React Query (API)
   const {
     data: fetchedMessages,
     isLoading: isLoadingMessages,
@@ -375,10 +442,19 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
   useEffect(() => {
     if (fetchedMessages && fetchedMessages.length > 0) {
       const sorted = [...fetchedMessages].reverse();
-      setMessages(sorted);
+      
+      // Save ENCRYPTED version to DB
       db.messages.bulkPut(sorted).catch((err) => console.error(err));
+
+      // Decrypt for UI
+      const decryptedSorted = sorted.map(msg => ({
+          ...msg,
+          content: decryptContent(msg as MessageType, keys, currentUser)
+      }));
+
+      setMessages(decryptedSorted);
     }
-  }, [fetchedMessages, setMessages]);
+  }, [fetchedMessages, setMessages, decryptContent, keys, currentUser]);
 
   useEffect(() => {
     setTypingUsers([]);
@@ -413,6 +489,7 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
     }
   }, [messages, isLoadingMore, isCacheLoading]);
 
+  // --- SOCKET LISTENERS ---
   useEffect(() => {
     if (!socket) return;
 
@@ -469,15 +546,29 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
         }
       }
 
+      // 1. Save ENCRYPTED message to DB
+      db.messages.put(msg).catch(console.error);
+
       if (isForCurrentConvo) {
-        setMessages((prev) => [...prev, msg]);
-        db.messages.put(msg).catch(console.error);
+        // 2. DECRYPT IMMEDIATELY for UI
+        // We pass the refs directly to ensure we have the latest keys inside this callback
+        const decryptedMsg = {
+             ...msg,
+             content: decryptContent(msg, keysRef.current, currentUser)
+        };
+        
+        setMessages((prev) => {
+            // Check if we already have this message (e.g. optimistic update)
+            // If we do, we replace it. If not, append.
+            const exists = prev.some(m => m.id === msg.id);
+            if(exists) return prev; 
+            return [...prev, decryptedMsg];
+        });
+
         setTimeout(
           () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }),
           50,
         );
-      } else {
-        db.messages.put(msg).catch(console.error);
       }
     };
 
@@ -492,7 +583,7 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
       socket.off("group:message", handleIncomingMessage);
       socket.off("dm:message", handleIncomingMessage);
     };
-  }, [socket, setMessages]);
+  }, [socket, setMessages, decryptContent]);
 
   const renderTypingIndicator = () => {
     if (typingUsers.length === 0) return null;
@@ -541,19 +632,45 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
       !socket
     )
       return;
+
     const tempId = crypto.randomUUID();
     const tempSender = toSimpleUser(currentUser);
+    
+    // --- ENCRYPT MESSAGE LOGIC ---
+    let finalContent = content; 
+    let nonce: string | undefined = undefined;
+    
+    // Use keys from ref or atom
+    const myPrivateKey = keys?.privateKey || currentUser.privateKey;
+
+    if(selectedConversation.type === 'dm') {
+        const recipientUser = selectedConversation.data as SimpleUser;
+        if(myPrivateKey && recipientUser.publicKey) {
+             const encrypted = encryptMessage(
+                myPrivateKey,
+                recipientUser.publicKey,
+                content
+             );
+             finalContent = encrypted.ciphertext;
+             nonce = encrypted.nonce;
+        } else {
+             console.warn("Missing keys, sending plaintext");
+        }
+    }
+
     const tempMessageBase = {
       id: tempId,
-      content,
       createdAt: new Date().toISOString(),
       senderId: currentUser.id,
       sender: tempSender,
       reactions: [],
       isOptimistic: true,
+      nonce: nonce, 
     };
 
-    let tempMessage: MessageType;
+    let tempMessageForState: MessageType; 
+    let messageToSave: MessageType;       
+    
     let eventName = "";
     let payload = {};
 
@@ -562,30 +679,48 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
       payload = {
         senderId: currentUser.id,
         roomId: selectedConversation.data.id,
-        content,
+        content: finalContent,
         tempId,
       };
-      tempMessage = {
+      
+      const common = {
         ...tempMessageBase,
         roomId: selectedConversation.data.id,
+        content: content 
       } as GroupMessage;
+      
+      tempMessageForState = common;
+      messageToSave = common;
+
     } else {
       eventName = "dm:send";
       payload = {
         senderId: currentUser.id,
         recipientId: selectedConversation.data.id,
-        content,
+        content: finalContent, 
+        nonce: nonce,          
         tempId,
       };
-      tempMessage = {
+      
+      // 1. Show PLAINTEXT in UI immediately
+      tempMessageForState = {
         ...tempMessageBase,
         recipientId: selectedConversation.data.id,
+        content: content, 
+      } as DirectMessage;
+
+      // 2. Save CIPHERTEXT to DB/Socket
+      messageToSave = {
+        ...tempMessageBase,
+        recipientId: selectedConversation.data.id,
+        content: finalContent, 
       } as DirectMessage;
     }
 
-    setMessages((prev) => [...prev, tempMessage]);
-    db.messages.put(tempMessage).catch(console.error);
+    setMessages((prev) => [...prev, tempMessageForState]);
+    db.messages.put(messageToSave).catch(console.error);
     socket.emit(eventName, payload);
+    
     setTimeout(
       () =>
         scrollContainerRef.current?.scrollTo({

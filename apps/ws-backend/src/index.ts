@@ -85,14 +85,23 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       senderId: string;
       recipientId: string;
       content: string;
+      nonce?: string;
       tempId: string;
     }) => {
       try {
+        // Fetch sender's public key
+        const sender = await prisma.user.findUnique({
+          where: { id: data.senderId },
+          select: { publicKey: true },
+        });
+
         const msg = await prisma.directMessage.create({
           data: {
             senderId: data.senderId,
             recipientId: data.recipientId,
-            content: data.content,
+            content: data.content, // This is already the ciphertext
+            nonce: data.nonce || null,
+            senderPublicKey: sender?.publicKey || null,
           },
           include: messageInclude,
         });
@@ -100,7 +109,7 @@ io.on("connection", (socket: AuthenticatedSocket) => {
         socket.emit("dm:confirm", { tempId: data.tempId, message: msg });
         socket.to(data.recipientId).emit("dm:receive", msg);
       } catch (err: any) {
-        console.error("Error sending DM");
+        console.error("Error sending DM:", err.message);
       }
     },
   );

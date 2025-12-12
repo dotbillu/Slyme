@@ -1,13 +1,18 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { useAtom, useSetAtom, atom } from "jotai";
-import { io, Socket } from "socket.io-client";
+import { useAtom, useSetAtom } from "jotai";
+import { io } from "socket.io-client";
 import { Loader2 } from "lucide-react";
 import { API_BASE_URL, WS_BASE_URL } from "@/lib/constants";
-import { ChatUserProfile, SimpleUser, MessageType, Reaction } from "@/lib/types";
+import {
+  ChatUserProfile,
+  SimpleUser,
+  MessageType,
+  Reaction,
+} from "@/lib/types";
 import NetworkSidebar from "./components/NetworkSidebar";
-import { db } from "@lib/db"; // Ensure this path is correct for your project
+import { db } from "@lib/db";
 
 import {
   userAtom,
@@ -20,7 +25,6 @@ import {
   selectedConversationAtom,
   socketAtom,
 } from "@store";
-
 
 export default function NetworkLayout({
   children,
@@ -54,36 +58,48 @@ export default function NetworkLayout({
 
     socket.emit("authenticate", currentUser.id);
 
-    const handleDmConfirm = async ({ tempId, message }: { tempId: string; message: MessageType }) => {
-      setMessages((prev) => prev.map((msg) => (msg.id === tempId ? message : msg)));
-      
-      if ('recipientId' in message) {
-          const otherUserId = message.recipientId;
-          
-          setDmConversations((prev) => 
-            prev.map((convo) => {
-                if (convo.id === otherUserId) {
-                    return {
-                        ...convo,
-                        lastMessage: message.content,
-                        lastMessageTimestamp: message.createdAt,
-                    };
-                }
-                return convo;
-            })
-          );
+    const handleDmConfirm = async ({
+      tempId,
+      message,
+    }: {
+      tempId: string;
+      message: MessageType;
+    }) => {
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === tempId ? message : msg)),
+      );
 
-          try {
-            await db.messages.put(message);
-            const conversation = dmConversations.find(c => c.id === otherUserId);
-            if (conversation) {
-               await db.dms.put({
-                 ...conversation,
-                 lastMessage: message.content,
-                 lastMessageTimestamp: message.createdAt
-               });
+      if ("recipientId" in message) {
+        const otherUserId = message.recipientId;
+
+        setDmConversations((prev) =>
+          prev.map((convo) => {
+            if (convo.id === otherUserId) {
+              return {
+                ...convo,
+                lastMessage: message.content,
+                lastMessageTimestamp: message.createdAt,
+              };
             }
-          } catch (e) { console.error("DB Sync Error", e); }
+            return convo;
+          }),
+        );
+
+        try {
+          await db.messages.put(message);
+          const conversation = dmConversations.find(
+            (c) => c.id === otherUserId,
+          );
+          if (conversation) {
+            await db.dms.put({
+              ...conversation,
+              lastMessage: message.content,
+              lastMessageTimestamp: message.createdAt,
+            });
+          }
+        } catch (e) {
+          console.error("DB Sync Error", e);
+        }
       }
     };
 
@@ -110,30 +126,42 @@ export default function NetworkLayout({
             };
           }
           return convo;
-        })
+        }),
       );
 
       try {
         await db.messages.put(message);
-        const conversation = dmConversations.find(c => c.id === message.senderId);
+        const conversation = dmConversations.find(
+          (c) => c.id === message.senderId,
+        );
         if (conversation) {
-           await db.dms.put({
-             ...conversation,
-             lastMessage: message.content,
-             lastMessageTimestamp: message.createdAt,
-             unseenCount: newUnseenCount
-           })
+          await db.dms.put({
+            ...conversation,
+            lastMessage: message.content,
+            lastMessageTimestamp: message.createdAt,
+            unseenCount: newUnseenCount,
+          });
         }
-      } catch (e) { console.error("DB Sync Error", e); }
+      } catch (e) {
+        console.error("DB Sync Error", e);
+      }
     };
 
-    const handleGroupReceive = async ({ tempId, message }: { tempId: string; message: MessageType }) => {
+    const handleGroupReceive = async ({
+      tempId,
+      message,
+    }: {
+      tempId: string;
+      message: MessageType;
+    }) => {
       const isSelected =
         selectedConversation?.type === "room" &&
         selectedConversation.data.id === message.roomId;
 
       if (message.senderId === currentUser.id) {
-        setMessages((prev) => prev.map((msg) => (msg.id === tempId ? message : msg)));
+        setMessages((prev) =>
+          prev.map((msg) => (msg.id === tempId ? message : msg)),
+        );
       } else if (isSelected) {
         setMessages((prev) => [...prev, message]);
       }
@@ -143,9 +171,12 @@ export default function NetworkLayout({
       setUserRooms((prev) =>
         prev.map((room) => {
           if (room.id === message.roomId) {
-            const shouldIncrement = message.senderId !== currentUser.id && !isSelected;
-            newUnseenCount = shouldIncrement ? (room.unseenCount || 0) + 1 : (room.unseenCount || 0);
-            
+            const shouldIncrement =
+              message.senderId !== currentUser.id && !isSelected;
+            newUnseenCount = shouldIncrement
+              ? (room.unseenCount || 0) + 1
+              : room.unseenCount || 0;
+
             return {
               ...room,
               lastMessage: message.content,
@@ -154,24 +185,34 @@ export default function NetworkLayout({
             };
           }
           return room;
-        })
+        }),
       );
 
       try {
         await db.messages.put(message);
-        const room = userRooms.find(r => r.id === message.roomId);
+        const room = userRooms.find((r) => r.id === message.roomId);
         if (room) {
-           await db.rooms.put({
-             ...room,
-             lastMessage: message.content,
-             lastMessageTimestamp: message.createdAt,
-             unseenCount: newUnseenCount
-           });
+          await db.rooms.put({
+            ...room,
+            lastMessage: message.content,
+            lastMessageTimestamp: message.createdAt,
+            unseenCount: newUnseenCount,
+          });
         }
-      } catch (e) { console.error("DB Sync Error", e); }
+      } catch (e) {
+        console.error("DB Sync Error", e);
+      }
     };
 
-    const handleReactionUpdate = ({ action, reaction, messageId }: { action: "added" | "removed"; reaction: Reaction; messageId: string }) => {
+    const handleReactionUpdate = ({
+      action,
+      reaction,
+      messageId,
+    }: {
+      action: "added" | "removed";
+      reaction: Reaction;
+      messageId: string;
+    }) => {
       setMessages((prev) =>
         prev.map((msg) => {
           if (msg.id !== messageId) return msg;
@@ -180,7 +221,7 @@ export default function NetworkLayout({
               ? [...msg.reactions, reaction]
               : msg.reactions.filter((r) => r.id !== reaction.id);
           return { ...msg, reactions: newReactions };
-        })
+        }),
       );
     };
 
@@ -194,8 +235,8 @@ export default function NetworkLayout({
         prev.map((convo) =>
           convo.id === user.id
             ? { ...convo, isOnline: user.isOnline, lastSeen: user.lastSeen }
-            : convo
-        )
+            : convo,
+        ),
       );
     };
 
@@ -214,7 +255,16 @@ export default function NetworkLayout({
       socket.off("message:deleted", handleMessageDeleted);
       socket.off("user:status", handleUserStatus);
     };
-  }, [socket, currentUser, setMessages, selectedConversation, setDmConversations, setUserRooms, dmConversations, userRooms]);
+  }, [
+    socket,
+    currentUser,
+    setMessages,
+    selectedConversation,
+    setDmConversations,
+    setUserRooms,
+    dmConversations,
+    userRooms,
+  ]);
 
   useEffect(() => {
     if (socket && userRooms.length > 0) {
@@ -234,15 +284,21 @@ export default function NetworkLayout({
       setLoading({ key: "profile", value: true });
       setError(null);
       try {
-        const res = await fetch(`${API_BASE_URL}/user/profile/${currentUser.username}`);
+        const res = await fetch(
+          `${API_BASE_URL}/user/profile/${currentUser.username}`,
+        );
         if (!res.ok) throw new Error("Failed to fetch user profile");
         const profile: ChatUserProfile = await res.json();
-        const roomsData = profile.rooms?.map((room) => ({ ...room, unseenCount: room.unseenCount || 0 })) || [];
+        const roomsData =
+          profile.rooms?.map((room) => ({
+            ...room,
+            unseenCount: room.unseenCount || 0,
+          })) || [];
         setUserRooms(roomsData);
         setFollowingList(profile.following || []);
         await db.rooms.bulkPut(roomsData);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError(`${err}`);
       } finally {
         setLoading({ key: "profile", value: false });
       }
@@ -250,10 +306,16 @@ export default function NetworkLayout({
 
     const fetchDmConversations = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/chat/dm/conversations/${currentUser.id}`);
+        const res = await fetch(
+          `${API_BASE_URL}/chat/dm/conversations/${currentUser.id}`,
+        );
         if (!res.ok) throw new Error("Failed to fetch DM conversations");
         const conversations: SimpleUser[] = await res.json();
-        const dmsData = conversations.map((convo) => ({ ...convo, unseenCount: convo.unseenCount || 0 }));
+        const dmsData = conversations.map((convo) => ({
+          ...convo,
+          unseenCount: convo.unseenCount || 0,
+        }));
+         console.log(conversations) 
         setDmConversations(dmsData);
         await db.dms.bulkPut(dmsData);
       } catch (err) {
@@ -263,14 +325,23 @@ export default function NetworkLayout({
 
     fetchUserProfile();
     fetchDmConversations();
-  }, [currentUser, setLoading, setError, setUserRooms, setFollowingList, setDmConversations]);
+  }, [
+    currentUser,
+    setLoading,
+    setError,
+    setUserRooms,
+    setFollowingList,
+    setDmConversations,
+  ]);
 
   if (!currentUser && !isLoading.profile) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-black text-gray-400 z-50">
         <div className="text-center">
           <Loader2 className="w-8 h-8 mx-auto animate-spin text-indigo-500" />
-          <h1 className="mt-4 text-xl font-semibold text-gray-200">Loading User...</h1>
+          <h1 className="mt-4 text-xl font-semibold text-gray-200">
+            Loading User...
+          </h1>
         </div>
       </div>
     );

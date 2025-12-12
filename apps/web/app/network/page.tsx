@@ -1,6 +1,6 @@
 "use client";
 
-import { useAtom, useSetAtom } from "jotai";
+import { useSetAtom } from "jotai";
 import { selectedConversationAtom } from "@store"; 
 import NetworkSidebar from "./components/NetworkSidebar";
 

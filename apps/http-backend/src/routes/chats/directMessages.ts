@@ -48,57 +48,72 @@ router.get("/:otherUserId", async (req, res) => {
   }
 });
 
+// get conversationlist {{{
 router.get("/conversations/:userId", async (req, res) => {
   const { userId } = req.params;
+
+  if (!userId) {
+    return res.status(400).json({ message: "User ID is required" });
+  }
+
   try {
-    const uId = userId;
-    if (!uId) {
-      return res.status(400).json({ message: "Invalid user ID" });
-    }
+    const userSelect = {
+      id: true,
+      name: true,
+      username: true,
+      image: true,
+      isOnline: true,
+      lastSeen: true,
+      publicKey: true, 
+    };
 
     const messages = await prisma.directMessage.findMany({
       where: {
-        OR: [{ senderId: uId }, { recipientId: uId }],
+        OR: [{ senderId: userId }, { recipientId: userId }],
       },
       orderBy: { createdAt: "desc" },
       include: {
-        sender: { select: senderSelect },
-        recipient: { select: senderSelect },
+        sender: { select: userSelect },
+        recipient: { select: userSelect },
       },
     });
 
     const conversations = new Map<string, any>();
 
     for (const message of messages) {
-      const isMeSender = message.senderId === uId;
+      const isMeSender = message.senderId === userId;
       const otherUser = isMeSender ? message.recipient : message.sender;
 
-      if (otherUser) {
-        if (!conversations.has(otherUser.id)) {
-          conversations.set(otherUser.id, {
-            ...otherUser,
-            lastMessage: message.content,
-            lastMessageTimestamp: message.createdAt,
-            unseenCount: 0,
-          });
-        }
+      if (!otherUser) continue;
 
-        if (!isMeSender && !message.isRead) {
-          const conv = conversations.get(otherUser.id);
-          if (conv) {
-            conv.unseenCount += 1;
-          }
+      if (!conversations.has(otherUser.id)) {
+        conversations.set(otherUser.id, {
+          ...otherUser,
+          lastMessage: message.content,
+          lastMessageTimestamp: message.createdAt,
+          unseenCount: 0,
+        });
+      }
+
+      if (!isMeSender && !message.isRead) {
+        const conv = conversations.get(otherUser.id);
+        if (conv) {
+          conv.unseenCount += 1;
         }
       }
     }
 
     res.json(Array.from(conversations.values()));
+    
   } catch (err) {
     console.error("Error fetching DM conversations:", err);
     res.status(500).json({ message: "Internal server error" });
   }
 });
 
+// }}}
+
+// mark-read{{{
 router.post("/mark-read", async (req, res) => {
   const { currentUserId, otherUserId } = req.body;
 
@@ -121,6 +136,8 @@ router.post("/mark-read", async (req, res) => {
     res.status(500).json({ message: "Failed to mark as read" });
   }
 });
+
+// }}}
 
 router.delete("/message/:messageId", async (req, res) => {
   res
