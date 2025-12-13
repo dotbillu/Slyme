@@ -19,13 +19,9 @@ const io = new Server(httpServer, {
   },
 });
 
-const LISTENING_PORT = parseInt(
-  process.env.PORT || process.env.WS_PORT || "8213",
-);
-const SELF_URL =
-  process.env.NEXT_PUBLIC_WS_SERVER_LINK ||
-  `http://localhost:${LISTENING_PORT}`;
+const LISTENING_PORT = parseInt(process.env.WS_PORT || "8213");
 
+// --- SELECTORS ---
 const senderSelect = {
   id: true,
   username: true,
@@ -33,17 +29,7 @@ const senderSelect = {
   image: true,
   isOnline: true,
   lastSeen: true,
-};
-
-const reactionSelect = {
-  id: true,
-  emoji: true,
-  user: { select: senderSelect },
-};
-
-const messageInclude = {
-  sender: { select: senderSelect },
-  reactions: { select: reactionSelect },
+  publicKey: true,
 };
 
 interface AuthenticatedSocket extends Socket {
@@ -67,16 +53,17 @@ io.on("connection", (socket: AuthenticatedSocket) => {
         where: { members: { some: { id: userId } } },
         select: { id: true },
       });
+
       userRooms.forEach((room: any) => {
         socket.to(room.id).emit("user:status", user);
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error("Authentication error");
     }
   });
 
   socket.on("join:rooms", (roomIds: string[]) => {
-    roomIds.forEach((id: string) => socket.join(id));
+    roomIds.forEach((id) => socket.join(id));
   });
 
   socket.on(
@@ -89,27 +76,47 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       tempId: string;
     }) => {
       try {
-        // Fetch sender's public key
         const sender = await prisma.user.findUnique({
           where: { id: data.senderId },
-          select: { publicKey: true },
+          select: senderSelect,
         });
 
-        const msg = await prisma.directMessage.create({
+        if (!sender) return;
+
+        const optimisticMessage = {
+          id: data.tempId,
+          content: data.content,
+          senderId: data.senderId,
+          recipientId: data.recipientId,
+          createdAt: new Date().toISOString(),
+          sender,
+          nonce: data.nonce || null,
+          senderPublicKey: sender.publicKey || null,
+          isRead: false,
+        };
+
+        socket.to(data.recipientId).emit("dm:receive", optimisticMessage);
+        socket.emit("dm:confirm", {
+          tempId: data.tempId,
+          message: optimisticMessage,
+        });
+
+        await prisma.directMessage.create({
           data: {
+            id: data.tempId, 
             senderId: data.senderId,
             recipientId: data.recipientId,
-            content: data.content, // This is already the ciphertext
+            content: data.content,
             nonce: data.nonce || null,
-            senderPublicKey: sender?.publicKey || null,
+            senderPublicKey: sender.publicKey || null,
           },
-          include: messageInclude,
         });
-
-        socket.emit("dm:confirm", { tempId: data.tempId, message: msg });
-        socket.to(data.recipientId).emit("dm:receive", msg);
       } catch (err: any) {
         console.error("Error sending DM:", err.message);
+        socket.emit("message:error", {
+          tempId: data.tempId,
+          error: "Failed to save",
+        });
       }
     },
   );
@@ -123,102 +130,64 @@ io.on("connection", (socket: AuthenticatedSocket) => {
       tempId: string;
     }) => {
       try {
-        const msg = await prisma.groupMessage.create({
+        const sender = await prisma.user.findUnique({
+          where: { id: data.senderId },
+          select: senderSelect,
+        });
+
+        if (!sender) return;
+
+        const optimisticMessage = {
+          id: data.tempId,
+          content: data.content,
+          senderId: data.senderId,
+          roomId: data.roomId,
+          createdAt: new Date().toISOString(),
+          sender,
+        };
+
+        io.to(data.roomId).emit("group:receive", {
+          tempId: data.tempId,
+          message: optimisticMessage,
+        });
+
+        await prisma.groupMessage.create({
           data: {
+            id: data.tempId,
             senderId: data.senderId,
             roomId: data.roomId,
             content: data.content,
           },
-          include: messageInclude,
         });
-
-        io.to(data.roomId).emit("group:receive", {
+      } catch (err) {
+        console.error("Error sending group message", err);
+        socket.emit("message:error", {
           tempId: data.tempId,
-          message: msg,
+          error: "Failed to save",
         });
-      } catch (err: any) {
-        console.error("Error sending group message");
       }
     },
   );
 
   socket.on(
-    "reaction:toggle",
-    async (data: {
-      userId: string;
-      emoji: string;
-      groupMessageId?: string;
-      directMessageId?: string;
-    }) => {
-      try {
-        const { userId, emoji, groupMessageId, directMessageId } = data;
-
-        const existing = await prisma.reaction.findFirst({
-          where: {
-            userId: userId,
-            emoji,
-            groupMessageId: groupMessageId ? groupMessageId : undefined,
-            directMessageId: directMessageId ? directMessageId : undefined,
-          },
+    "conversation:mark_seen",
+    async (data: { senderId: string; conversationId: string; type: "dm" | "room" }) => {
+      if (data.type === "dm" && socket.userId) {
+        socket.to(data.conversationId).emit("conversation:seen", {
+          viewerId: socket.userId,
+          time: new Date().toISOString(),
         });
 
-        let savedReaction: any;
-        let action: "added" | "removed" = "added";
-        let messageId: string;
-        let conversationId: string | undefined;
-
-        if (existing) {
-          await prisma.reaction.delete({ where: { id: existing.id } });
-          action = "removed";
-          savedReaction = existing;
-          messageId = (groupMessageId || directMessageId)!;
-        } else {
-          savedReaction = await prisma.reaction.create({
-            data: {
-              userId: userId,
-              emoji,
-              groupMessageId: groupMessageId ? groupMessageId : undefined,
-              directMessageId: directMessageId ? directMessageId : undefined,
-            },
-            select: reactionSelect,
-          });
-          action = "added";
-          messageId = (groupMessageId || directMessageId)!;
-        }
-
-        if (groupMessageId) {
-          const msg = await prisma.groupMessage.findUnique({
-            where: { id: groupMessageId },
-          });
-          if (msg) conversationId = msg.roomId;
-        } else {
-          const msg = await prisma.directMessage.findUnique({
-            where: { id: directMessageId },
-          });
-          if (msg) {
-            io.to(msg.senderId).emit("reaction:update", {
-              action,
-              reaction: savedReaction,
-              messageId,
-            });
-            io.to(msg.recipientId).emit("reaction:update", {
-              action,
-              reaction: savedReaction,
-              messageId,
-            });
-            return;
-          }
-        }
-
-        if (conversationId) {
-          io.to(conversationId).emit("reaction:update", {
-            action,
-            reaction: savedReaction,
-            messageId,
-          });
-        }
-      } catch (err: any) {
-        console.error("Error toggling reaction");
+        try {
+           await prisma.directMessage.updateMany({
+             where: {
+               senderId: data.conversationId, 
+               recipientId: socket.userId,
+               isRead: false
+             },
+             data: { isRead: true }
+           });
+        } catch(e) { console.log(e); }
       }
     },
   );
@@ -258,7 +227,7 @@ io.on("connection", (socket: AuthenticatedSocket) => {
         if (recipientId) {
           io.to(recipientId).emit("message:deleted", messageId);
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error deleting message");
       }
     },
@@ -266,11 +235,7 @@ io.on("connection", (socket: AuthenticatedSocket) => {
 
   socket.on(
     "typing:start",
-    (data: {
-      conversationId: string;
-      isGroup: boolean;
-      senderName: string;
-    }) => {
+    (data: { conversationId: string; isGroup: boolean; senderName: string }) => {
       if (data.isGroup) {
         socket.to(data.conversationId).emit("user:typing", {
           conversationId: data.conversationId,
@@ -317,7 +282,7 @@ io.on("connection", (socket: AuthenticatedSocket) => {
         userRooms.forEach((room: any) => {
           socket.to(room.id).emit("user:status", user);
         });
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error on disconnect");
       }
     }
@@ -325,16 +290,5 @@ io.on("connection", (socket: AuthenticatedSocket) => {
 });
 
 httpServer.listen(LISTENING_PORT, "0.0.0.0", () => {
-  if (process.env.NODE_ENV === "production" && SELF_URL) {
-    setInterval(
-      async () => {
-        try {
-          const response = await fetch(`${SELF_URL}/health`);
-        } catch (error) {
-          console.error("Keep-alive ping failed");
-        }
-      },
-      14 * 60 * 1000,
-    );
-  }
+  console.log(`WS server listening on ${LISTENING_PORT}`);
 });

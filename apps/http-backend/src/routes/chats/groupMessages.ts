@@ -10,13 +10,7 @@ const senderSelect = {
   name: true,
   image: true,
 };
-const reactionSelect = {
-  id: true,
-  emoji: true,
-  user: { select: senderSelect },
-};
 
-// GET Group Message History (for pagination)
 router.get("/:roomId/messages", async (req, res) => {
   const { roomId } = req.params;
   const skip = parseInt(req.query.skip as string) || 0;
@@ -31,13 +25,6 @@ router.get("/:roomId/messages", async (req, res) => {
       include: {
         sender: {
           select: { id: true, username: true, name: true, image: true }
-        },
-        reactions: {
-          select: {
-            id: true,
-            emoji: true,
-            user: { select: { id: true, username: true, name: true } }
-          }
         },
       },
     });

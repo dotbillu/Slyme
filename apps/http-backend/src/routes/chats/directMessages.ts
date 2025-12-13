@@ -32,13 +32,6 @@ router.get("/:otherUserId", async (req, res) => {
       take: parseInt(take as string) || 30,
       include: {
         sender: { select: senderSelect },
-        reactions: {
-          select: {
-            id: true,
-            emoji: true,
-            user: { select: { id: true, username: true, name: true } },
-          },
-        },
       },
     });
     res.json(messages);

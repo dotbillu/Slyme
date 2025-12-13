@@ -6,7 +6,7 @@ export interface User {
   image?: string | null;
   createdAt: string;
   publicKey?: string;
-  privateKey?: string; // Added for local user state
+  privateKey?: string;
 }
 
 export interface E2EEKeys {
@@ -23,7 +23,7 @@ export interface Following {
   lastMessageTimestamp: string | null;
   isOnline?: boolean;
   unseenCount?: number;
-  publicKey?: string; // Added to facilitate immediate encryption
+  publicKey?: string;
 }
 
 export interface Post {
@@ -252,12 +252,14 @@ export interface MessageBubbleProps {
   onDelete: (messageId: string) => void;
   onToggleReaction: (messageId: string, emoji: string) => void;
   spacing: "small" | "large";
+  shouldAnimate?: boolean;
 }
 
 export interface MessageListProps {
   messages: MessageType[];
   currentUser: SimpleUser;
   selectedConversation: NonNullable<SelectedConversation>;
+  allowAnimations?: boolean;
   onDelete: (messageId: string) => void;
   onToggleReaction: (messageId: string, emoji: string) => void;
 }

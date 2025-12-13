@@ -8,30 +8,29 @@ generator client {
 }
 
 model User {
-  id          String    @id @default(uuid())
-  name        String
-  username    String    @unique
-  email       String    @unique
-  image       String?
-  publicKey   String?   
-  password    String?
-  posterImage String?
-  createdAt   DateTime  @default(now())
-  isOnline    Boolean   @default(false)
-  lastSeen    DateTime?
+  id            String    @id @default(uuid())
+  name          String
+  username      String    @unique
+  email         String    @unique
+  image         String?
+  publicKey     String?   
+  password      String?
+  posterImage   String?
+  createdAt     DateTime  @default(now())
+  isOnline      Boolean   @default(false)
+  lastSeen      DateTime?
 
-  posts       Post[]            @relation("UserPosts")
-  rooms       MapRoom[]         @relation("UserRooms")
-  mapRooms    MapRoom[]         @relation("MapRoomCreator")
-  gigs        Gig[]             @relation("GigCreator")
-  followers   User[]            @relation("UserFollows")
-  following   User[]            @relation("UserFollows")
-  likes       Like[]            @relation("UserLikes")
-  comments    Comment[]         @relation("UserComments")
-  groupMessages GroupMessage[]  @relation("UserGroupMessages")
-  sentDMs     DirectMessage[]   @relation("SentDMs")
-  receivedDMs DirectMessage[]   @relation("ReceivedDMs")
-  reactions   Reaction[]
+  posts         Post[]            @relation("UserPosts")
+  rooms         MapRoom[]         @relation("UserRooms")
+  mapRooms      MapRoom[]         @relation("MapRoomCreator")
+  gigs          Gig[]             @relation("GigCreator")
+  followers     User[]            @relation("UserFollows")
+  following     User[]            @relation("UserFollows")
+  likes         Like[]            @relation("UserLikes")
+  comments      Comment[]         @relation("UserComments")
+  groupMessages GroupMessage[]    @relation("UserGroupMessages")
+  sentDMs       DirectMessage[]   @relation("SentDMs")
+  receivedDMs   DirectMessage[]   @relation("ReceivedDMs")
 }
 
 model Post {
@@ -56,7 +55,7 @@ model Like {
   post   Post   @relation("PostLikes", fields: [postId], references: [id], onDelete: Cascade)
   postId String
 
-  user   User     @relation("UserLikes", fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation("UserLikes", fields: [userId], references: [id], onDelete: Cascade)
   userId String
 
   createdAt DateTime @default(now())
@@ -70,7 +69,7 @@ model Comment {
   post    Post   @relation("PostComments", fields: [postId], references: [id], onDelete: Cascade)
   postId  String
 
-  user   User     @relation("UserComments", fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation("UserComments", fields: [userId], references: [id], onDelete: Cascade)
   userId String
 
   createdAt DateTime @default(now())
@@ -84,7 +83,7 @@ model MapRoom {
   longitude   Float
   createdAt   DateTime @default(now())
 
-  createdBy User     @relation("MapRoomCreator", fields: [creatorId], references: [id])
+  createdBy User   @relation("MapRoomCreator", fields: [creatorId], references: [id])
   creatorId String
 
   members  User[]   @relation("UserRooms")
@@ -107,7 +106,7 @@ model Gig {
   expiresAt   DateTime?
   createdAt   DateTime  @default(now())
 
-  createdBy User     @relation("GigCreator", fields: [creatorId], references: [id])
+  createdBy User   @relation("GigCreator", fields: [creatorId], references: [id])
   creatorId String
 
   room   MapRoom? @relation("RoomGigs", fields: [roomId], references: [id])
@@ -128,8 +127,6 @@ model GroupMessage {
   room   MapRoom  @relation("RoomGroupMessages", fields: [roomId], references: [id], onDelete: Cascade)
   roomId String
 
-  reactions Reaction[]
-
   @@index([roomId])
 }
 
@@ -148,29 +145,6 @@ model DirectMessage {
   recipient   User     @relation("ReceivedDMs", fields: [recipientId], references: [id], onDelete: Cascade)
   recipientId String
 
-  reactions Reaction[]
-
   @@index([senderId, recipientId])
   @@index([recipientId, senderId])
-}
-
-model Reaction {
-  id        String   @id @default(uuid())
-  emoji     String
-  createdAt DateTime @default(now())
-
-  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String
-
-  groupMessage   GroupMessage? @relation(fields: [groupMessageId], references: [id], onDelete: Cascade)
-  groupMessageId String?
-
-  directMessage   DirectMessage? @relation(fields: [directMessageId], references: [id], onDelete: Cascade)
-  directMessageId String?
-
-  @@unique([userId, groupMessageId, emoji])
-  @@unique([userId, directMessageId, emoji])
-  @@index([groupMessageId])
-  @@index([directMessageId])
-  @@index([userId])
 }

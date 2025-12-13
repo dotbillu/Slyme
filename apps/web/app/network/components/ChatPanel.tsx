@@ -1,11 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import React, { useEffect, useRef, useState, useLayoutEffect, useCallback } from "react";
+import React, { useEffect, useRef, useState, useLayoutEffect } from "react";
 import Link from "next/link";
 import { useAtom } from "jotai";
 import { useRouter } from "next/navigation";
-import { Loader2, ArrowLeft, Check, SmilePlus, Trash2 } from "lucide-react";
+import { Loader2, ArrowLeft, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import ChatInput from "./ChatInput";
 import {
@@ -20,10 +20,8 @@ import {
   User,
 } from "@/lib/types";
 import { API_BASE_URL } from "@/lib/constants";
-import { db } from "@/lib/db";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import ChatPanelSkeleton from "../ui/ChatPanelSkeleton";
-import EmojiPicker from "../ui/EmojiPicker";
 import DateHeader from "../ui/DateHeader";
 import {
   selectedConversationAtom,
@@ -31,78 +29,33 @@ import {
   userAtom,
   messagesAtom,
   socketAtom,
-  keysAtom,
 } from "@store";
-
-// --- IMPORT ENCRYPTION LOGIC ---
-import { encryptMessage, decryptMessage } from "@/lib/crypt";
+import {
+  formatDate,
+  formatLastSeen,
+  handleIncomingMessage,
+  handleUserStoppedTyping,
+  handleUserTyping,
+  handleConversationSeen,
+  toSimpleUser,
+} from "../service";
 
 const SCROLL_THRESHOLD = 200;
 
-function formatLastSeen(lastSeen: string | null | undefined): string {
-  if (!lastSeen) return "";
-  const date = new Date(lastSeen);
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "Last seen just now";
-  if (minutes < 60) return `Last seen ${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `Last seen ${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "Last seen yesterday";
-  return `Last seen ${days}d ago`;
-}
 
-const formatDate = (date: Date) => {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const targetDate = new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-  );
-  if (targetDate.getTime() === today.getTime()) return "Today";
-  if (targetDate.getTime() === yesterday.getTime()) return "Yesterday";
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-};
-
-const toSimpleUser = (user: User): SimpleUser => ({
-  id: user.id,
-  username: user.username,
-  name: user.name,
-  image: user.image || null,
-  isOnline: true,
-  lastMessage: null,
-  lastMessageTimestamp: null,
-  publicKey: user.publicKey, 
-});
-
-interface ExtendedMessageBubbleProps extends MessageBubbleProps {
-  shouldAnimate: boolean;
-}
-
-const MessageBubble: React.FC<ExtendedMessageBubbleProps> = ({
+// MessageBubble {{{
+const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
   isMe,
   isGroup,
   onDelete,
-  onToggleReaction,
   spacing,
   shouldAnimate,
 }) => {
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
   const senderName = message.sender?.name || "Unknown";
-  const timestamp = new Date(message.createdAt).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+
   const placeholder = `https://placehold.co/40x40/374151/white?text=${senderName.charAt(0).toUpperCase()}`;
   const rawImage = message.sender?.image;
   const src = rawImage
@@ -111,40 +64,32 @@ const MessageBubble: React.FC<ExtendedMessageBubbleProps> = ({
       : `${API_BASE_URL}/uploads/${rawImage}`
     : placeholder;
 
-  const groupedReactions = message.reactions
-    ? message.reactions.reduce(
-        (acc, reaction) => {
-          acc[reaction.emoji] = (acc[reaction.emoji] || 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>,
-      )
-    : {};
-
-  const hasReactions = Object.entries(groupedReactions).length > 0;
-
   return (
     <div
       id={`message-${message.id}`}
-      className={`flex group ${isMe ? "justify-end" : "justify-start"} ${spacing === "large" ? "mt-6" : "mt-2"} ${hasReactions ? "mb-8" : ""}`}
+      className={`flex group w-full px-3 ${
+        isMe ? "justify-end" : "justify-start pl-2"
+      } ${spacing === "large" ? "mt-2" : "mt-1"}`}
     >
       <div
-        className={`flex items-center max-w-xs md:max-w-md lg:max-w-lg gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}
+        className={`flex items-center max-w-[85%] md:max-w-[70%] lg:max-w-[60%] gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}
       >
-        {!isMe && (
+        {!isMe && isGroup && (
           <Link
             href={`/profile/${message.sender?.username || "#"}`}
             className="self-end"
           >
-            <img
-              src={src}
-              onError={(e) => (e.currentTarget.src = placeholder)}
+            <Image
+              src={imgError ? placeholder : src}
               alt={senderName}
+              width={32}
+              height={32}
+              onError={() => setImgError(true)}
               className="w-8 h-8 rounded-full object-cover mb-1 shrink-0"
+              unoptimized
             />
           </Link>
         )}
-        {isMe && <div className="w-8 h-8 shrink-0" />}
 
         <motion.div
           layout
@@ -174,50 +119,20 @@ const MessageBubble: React.FC<ExtendedMessageBubbleProps> = ({
           >
             {message.content}
           </p>
-          <div
-            className={`flex items-center justify-end gap-1 mt-1 ${isMe ? "text-indigo-200" : "text-gray-400"}, text-xs`}
-          >
-            <span>{timestamp}</span>
-            {isMe && <Check size={16} />}
-          </div>
-
-          {hasReactions && (
-            <div className="absolute -bottom-4 right-0 flex gap-1 bg-gray-800 border border-gray-700 rounded-full px-2 py-0.5 shadow-md z-10">
-              {Object.entries(groupedReactions).map(([emoji, count]) => (
-                <span key={emoji} className="text-xs">
-                  {emoji} {count > 1 && count}
-                </span>
-              ))}
-            </div>
-          )}
         </motion.div>
 
-        <div className="relative flex flex-col items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity self-center">
-          <button
-            onClick={() => setShowEmojiPicker((p) => !p)}
-            className="text-gray-400 hover:text-gray-200"
-          >
-            <SmilePlus size={18} />
-          </button>
+        {/* --- Trash Button --- */}
+        <div className="relative flex flex-col items-center gap-2 transition-opacity self-center opacity-0 group-hover:opacity-100">
           {isMe && (
             <button
-              onClick={() => onDelete(message.id as string)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(message.id as string);
+              }}
               className="text-gray-400 hover:text-red-500"
             >
-              <Trash2 size={18} />
+              <Trash2 size={12} />
             </button>
-          )}
-          {showEmojiPicker && (
-            <div
-              className={`absolute z-10 ${isMe ? "right-full mr-55" : "left-full ml-2"} -top-2`}
-            >
-              <EmojiPicker
-                onSelect={(emoji) => {
-                  onToggleReaction(message.id as string, emoji);
-                  setShowEmojiPicker(false);
-                }}
-              />
-            </div>
           )}
         </div>
       </div>
@@ -225,23 +140,26 @@ const MessageBubble: React.FC<ExtendedMessageBubbleProps> = ({
   );
 };
 
-interface ExtendedMessageListProps extends MessageListProps {
-  allowAnimations: boolean;
-}
+// }}}
 
+// MessageList {{{
 const MessageList = React.memo(
   ({
     messages,
     currentUser,
     selectedConversation,
     onDelete,
-    onToggleReaction,
     allowAnimations,
-  }: ExtendedMessageListProps) => {
+    onToggleReaction,
+  }: MessageListProps) => {
     let lastDateString: string | null = null;
     let lastMessageTimestamp: Date | null = null;
     let lastSenderId: string | null = null;
     const FIVE_MINUTES = 5 * 60 * 1000;
+
+    const myMessages = messages.filter((m) => m.senderId === currentUser.id);
+    const lastSentMessageId =
+      myMessages.length > 0 ? myMessages[myMessages.length - 1].id : null;
 
     return (
       <div className="flex flex-col justify-end min-h-full pb-2">
@@ -249,26 +167,51 @@ const MessageList = React.memo(
           if (!msg || !msg.createdAt) return null;
           const messageDate = new Date(msg.createdAt);
           const messageDateString = formatDate(messageDate);
+
           let showDateHeader = false;
+          let showTimeSeparator = false;
+
           if (messageDateString !== lastDateString) {
             showDateHeader = true;
             lastDateString = messageDateString;
+          } else if (lastMessageTimestamp) {
+            const timeDiff =
+              messageDate.getTime() - lastMessageTimestamp.getTime();
+            if (timeDiff > FIVE_MINUTES) {
+              showTimeSeparator = true;
+            }
           }
+
           let spacing: "small" | "large" = "large";
           if (
             !showDateHeader &&
+            !showTimeSeparator &&
             lastMessageTimestamp &&
-            msg.senderId === lastSenderId &&
-            messageDate.getTime() - lastMessageTimestamp.getTime() <
-              FIVE_MINUTES
+            msg.senderId === lastSenderId
           ) {
             spacing = "small";
           }
+
           lastMessageTimestamp = messageDate;
           lastSenderId = msg.senderId;
+
+          const isLastSentByMe = msg.id === lastSentMessageId;
+
           return (
             <React.Fragment key={msg.id}>
               {showDateHeader && <DateHeader date={messageDateString} />}
+
+              {showTimeSeparator && (
+                <div className="flex justify-center my-4">
+                  <span className="text-xs text-zinc-500 font-medium">
+                    {messageDate.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+              )}
+
               <MessageBubble
                 message={msg}
                 isMe={msg.senderId === currentUser.id}
@@ -278,6 +221,14 @@ const MessageList = React.memo(
                 spacing={spacing}
                 shouldAnimate={allowAnimations}
               />
+
+              {isLastSentByMe && msg.isRead && (
+                <div className="flex justify-end pr-3 mt-1 mb-2">
+                  <span className="text-[10px] text-zinc-500 font-medium">
+                    Seen
+                  </span>
+                </div>
+              )}
             </React.Fragment>
           );
         })}
@@ -287,16 +238,17 @@ const MessageList = React.memo(
 );
 MessageList.displayName = "MessageList";
 
+// }}}
+
+// ChatPanel {{{
 const ChatPanel: React.FC<ChatPanelProps> = () => {
   const [currentUser] = useAtom(userAtom);
-  const [keys] = useAtom(keysAtom); 
   const [selectedConversation] = useAtom(selectedConversationAtom);
   const [messages, setMessages] = useAtom(messagesAtom);
   const [error, setError] = useAtom(networkErrorAtom);
   const [socket] = useAtom(socketAtom);
 
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
-  const [isCacheLoading, setIsCacheLoading] = useState(true);
   const [headerImgError, setHeaderImgError] = useState(false);
   const [allowAnimations, setAllowAnimations] = useState(false);
 
@@ -308,128 +260,26 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
 
   const selectedConversationRef = useRef(selectedConversation);
   const currentUserRef = useRef(currentUser);
-  
-  // Use Refs for Keys to access them inside socket listeners without stale closures
-  const keysRef = useRef(keys);
 
   useEffect(() => {
     selectedConversationRef.current = selectedConversation;
     currentUserRef.current = currentUser;
-    keysRef.current = keys;
-  }, [selectedConversation, currentUser, keys]);
+  }, [selectedConversation, currentUser]);
 
-  // --- ENCRYPTION HELPER ---
-  const decryptContent = useCallback((msg: MessageType, currentKeys?: any, currentUserData?: any): string => {
-    // 1. Get Private Key (Prefer passed keys, then ref, then object)
-    const privKey = currentKeys?.privateKey || keysRef.current?.privateKey || currentUserData?.privateKey;
-
-    if (msg.roomId || !msg.nonce || !privKey) {
-        return msg.content;
-    }
-    
-    // Determine the public key of the OTHER person
-    const meId = currentUserData?.id || currentUserRef.current?.id;
-    const isMeSender = msg.senderId === meId;
-    
-    let otherPublicKey = "";
-
-    // IMPORTANT: We use selectedConversationRef to be safe in async callbacks
-    const currentConvo = selectedConversationRef.current;
-
-    if (isMeSender) {
-        // If I sent it, decrypt using the Recipient's Public Key
-        if(currentConvo?.type === 'dm' && currentConvo.data.id === msg.recipientId) {
-            otherPublicKey = (currentConvo.data as SimpleUser).publicKey || "";
-        }
-    } else {
-        // If I received it, decrypt using the Sender's Public Key
-        if(currentConvo?.type === 'dm' && currentConvo.data.id === msg.senderId) {
-             otherPublicKey = (currentConvo.data as SimpleUser).publicKey || "";
-        } else {
-             otherPublicKey = msg.sender?.publicKey || "";
-        }
-    }
-
-    if (!otherPublicKey) return "Encrypted message";
-
-    try {
-        const decrypted = decryptMessage(
-            privKey, 
-            otherPublicKey, 
-            msg.content, 
-            msg.nonce
-        );
-        return decrypted || "Failed to decrypt";
-    } catch (e) {
-        return "Decryption Error";
-    }
-  }, []);
-
-  // Initial Load from DB (Cache)
   useEffect(() => {
     if (!selectedConversation || !currentUser) return;
-
-    setIsCacheLoading(true);
     setAllowAnimations(false);
     setMessages([]);
     setHeaderImgError(false);
+    isInitialLoad.current = true;
+    setTimeout(() => setAllowAnimations(true), 100);
+  }, [
+    selectedConversation?.data.id,
+    currentUser,
+    selectedConversation,
+    setMessages,
+  ]);
 
-    const loadFromCache = async () => {
-      let cachedMsgs = [];
-      try {
-        if (selectedConversation.type === "room") {
-          cachedMsgs = await db.messages
-            .where("roomId")
-            .equals(selectedConversation.data.id)
-            .toArray();
-        } else {
-          const myId = String(currentUser.id);
-          const otherId = String(selectedConversation.data.id);
-          cachedMsgs = await db.messages
-            .filter((msg) => {
-              if (msg.roomId) return false;
-              const sId = String(msg.senderId);
-              const rId = String(msg.recipientId);
-              return (
-                (sId === myId && rId === otherId) ||
-                (sId === otherId && rId === myId)
-              );
-            })
-            .toArray();
-        }
-
-        if (cachedMsgs.length > 0) {
-          cachedMsgs.sort(
-            (a, b) =>
-              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-          );
-          
-          // Decrypt loaded messages
-          const decryptedMsgs = cachedMsgs.map(msg => ({
-             ...msg,
-             content: decryptContent(msg as MessageType, keys, currentUser)
-          }));
-
-          setMessages(decryptedMsgs);
-          
-          if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollTop =
-              scrollContainerRef.current.scrollHeight;
-          }
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsCacheLoading(false);
-        isInitialLoad.current = true;
-        setTimeout(() => setAllowAnimations(true), 100);
-      }
-    };
-
-    loadFromCache();
-  }, [selectedConversation?.data.id, currentUser, setMessages, decryptContent, keys]);
-
-  // Handle messages fetched via React Query (API)
   const {
     data: fetchedMessages,
     isLoading: isLoadingMessages,
@@ -442,19 +292,9 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
   useEffect(() => {
     if (fetchedMessages && fetchedMessages.length > 0) {
       const sorted = [...fetchedMessages].reverse();
-      
-      // Save ENCRYPTED version to DB
-      db.messages.bulkPut(sorted).catch((err) => console.error(err));
-
-      // Decrypt for UI
-      const decryptedSorted = sorted.map(msg => ({
-          ...msg,
-          content: decryptContent(msg as MessageType, keys, currentUser)
-      }));
-
-      setMessages(decryptedSorted);
+      setMessages(sorted);
     }
-  }, [fetchedMessages, setMessages, decryptContent, keys, currentUser]);
+  }, [fetchedMessages, setMessages]);
 
   useEffect(() => {
     setTypingUsers([]);
@@ -465,15 +305,13 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
   }, [isError, setError]);
 
   useLayoutEffect(() => {
-    if (isCacheLoading || !scrollContainerRef.current) return;
-
+    if (!scrollContainerRef.current) return;
     if (oldScrollHeightRef.current > 0 && !isLoadingMore) {
       scrollContainerRef.current.scrollTop =
         scrollContainerRef.current.scrollHeight - oldScrollHeightRef.current;
       oldScrollHeightRef.current = 0;
       return;
     }
-
     if (messages.length > 0) {
       if (isInitialLoad.current) {
         scrollContainerRef.current.scrollTop =
@@ -487,103 +325,48 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
         }
       }
     }
-  }, [messages, isLoadingMore, isCacheLoading]);
+  }, [messages, isLoadingMore]);
 
-  // --- SOCKET LISTENERS ---
+  useEffect(() => {
+    if (selectedConversation && socket && currentUser && messages.length > 0) {
+      socket.emit("conversation:mark_seen", {
+        senderId: currentUser.id,
+        conversationId: selectedConversation.data.id,
+        type: selectedConversation.type,
+      });
+    }
+  }, [selectedConversation, socket, messages.length, currentUser]);
+
   useEffect(() => {
     if (!socket) return;
-
-    const handleUserTyping = (data: TypingUser) => {
-      const currentConvo = selectedConversationRef.current;
-      if (
-        currentConvo &&
-        String(data.conversationId) === String(currentConvo.data.id)
-      ) {
-        setTypingUsers((prev) => {
-          if (prev.some((u) => u.name === data.name)) return prev;
-          return [...prev, data];
-        });
-      }
+    const context = {
+      selectedConversationRef,
+      currentUserRef,
+      messagesEndRef,
+      setTypingUsers,
+      setMessages,
     };
+    const onStopTyping = (data: { conversationId: string; name?: string }) =>
+      handleUserStoppedTyping(data, context);
+    const onTyping = (data: TypingUser) => handleUserTyping(data, context);
+    const onMessage = (msg: MessageType) => handleIncomingMessage(msg, context);
+    const onConversationSeen = (data: any) =>
+      handleConversationSeen(data, context);
 
-    const handleUserStoppedTyping = (data: {
-      conversationId: string;
-      name?: string;
-    }) => {
-      const currentConvo = selectedConversationRef.current;
-      if (
-        currentConvo &&
-        String(data.conversationId) === String(currentConvo.data.id)
-      ) {
-        setTypingUsers((prev) => {
-          if (data.name) return prev.filter((u) => u.name !== data.name);
-          return [];
-        });
-      }
-    };
-
-    const handleIncomingMessage = (msg: MessageType) => {
-      const currentConvo = selectedConversationRef.current;
-      const currentUser = currentUserRef.current;
-      if (!currentConvo || !currentUser) return;
-
-      setTypingUsers((prev) => prev.filter((u) => u.name !== msg.sender?.name));
-
-      let isForCurrentConvo = false;
-      if (currentConvo.type === "room") {
-        if (String(msg.roomId) === String(currentConvo.data.id))
-          isForCurrentConvo = true;
-      } else if (currentConvo.type === "dm") {
-        const msgSender = String(msg.senderId);
-        const msgRecipient = String(msg.recipientId);
-        const currentId = String(currentUser.id);
-        const convoId = String(currentConvo.data.id);
-        if (
-          (msgSender === convoId && msgRecipient === currentId) ||
-          (msgSender === currentId && msgRecipient === convoId)
-        ) {
-          isForCurrentConvo = true;
-        }
-      }
-
-      // 1. Save ENCRYPTED message to DB
-      db.messages.put(msg).catch(console.error);
-
-      if (isForCurrentConvo) {
-        // 2. DECRYPT IMMEDIATELY for UI
-        // We pass the refs directly to ensure we have the latest keys inside this callback
-        const decryptedMsg = {
-             ...msg,
-             content: decryptContent(msg, keysRef.current, currentUser)
-        };
-        
-        setMessages((prev) => {
-            // Check if we already have this message (e.g. optimistic update)
-            // If we do, we replace it. If not, append.
-            const exists = prev.some(m => m.id === msg.id);
-            if(exists) return prev; 
-            return [...prev, decryptedMsg];
-        });
-
-        setTimeout(
-          () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }),
-          50,
-        );
-      }
-    };
-
-    socket.on("user:typing", handleUserTyping);
-    socket.on("user:stopped-typing", handleUserStoppedTyping);
-    socket.on("group:message", handleIncomingMessage);
-    socket.on("dm:message", handleIncomingMessage);
+    socket.on("user:typing", onTyping);
+    socket.on("user:stopped-typing", onStopTyping);
+    socket.on("group:message", onMessage);
+    socket.on("dm:message", onMessage);
+    socket.on("conversation:seen", onConversationSeen);
 
     return () => {
-      socket.off("user:typing", handleUserTyping);
-      socket.off("user:stopped-typing", handleUserStoppedTyping);
-      socket.off("group:message", handleIncomingMessage);
-      socket.off("dm:message", handleIncomingMessage);
+      socket.off("user:typing", onTyping);
+      socket.off("user:stopped-typing", onStopTyping);
+      socket.off("group:message", onMessage);
+      socket.off("dm:message", onMessage);
+      socket.off("conversation:seen", onConversationSeen);
     };
-  }, [socket, setMessages, decryptContent]);
+  }, [socket, setMessages]);
 
   const renderTypingIndicator = () => {
     if (typingUsers.length === 0) return null;
@@ -632,45 +415,20 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
       !socket
     )
       return;
-
     const tempId = crypto.randomUUID();
     const tempSender = toSimpleUser(currentUser);
-    
-    // --- ENCRYPT MESSAGE LOGIC ---
-    let finalContent = content; 
-    let nonce: string | undefined = undefined;
-    
-    // Use keys from ref or atom
-    const myPrivateKey = keys?.privateKey || currentUser.privateKey;
-
-    if(selectedConversation.type === 'dm') {
-        const recipientUser = selectedConversation.data as SimpleUser;
-        if(myPrivateKey && recipientUser.publicKey) {
-             const encrypted = encryptMessage(
-                myPrivateKey,
-                recipientUser.publicKey,
-                content
-             );
-             finalContent = encrypted.ciphertext;
-             nonce = encrypted.nonce;
-        } else {
-             console.warn("Missing keys, sending plaintext");
-        }
-    }
-
     const tempMessageBase = {
       id: tempId,
+      content,
       createdAt: new Date().toISOString(),
       senderId: currentUser.id,
       sender: tempSender,
-      reactions: [],
       isOptimistic: true,
-      nonce: nonce, 
+      isRead: false,
+      reactions: [],
     };
 
-    let tempMessageForState: MessageType; 
-    let messageToSave: MessageType;       
-    
+    let tempMessage: MessageType;
     let eventName = "";
     let payload = {};
 
@@ -679,48 +437,29 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
       payload = {
         senderId: currentUser.id,
         roomId: selectedConversation.data.id,
-        content: finalContent,
+        content,
         tempId,
       };
-      
-      const common = {
+      tempMessage = {
         ...tempMessageBase,
         roomId: selectedConversation.data.id,
-        content: content 
       } as GroupMessage;
-      
-      tempMessageForState = common;
-      messageToSave = common;
-
     } else {
       eventName = "dm:send";
       payload = {
         senderId: currentUser.id,
         recipientId: selectedConversation.data.id,
-        content: finalContent, 
-        nonce: nonce,          
+        content,
         tempId,
       };
-      
-      // 1. Show PLAINTEXT in UI immediately
-      tempMessageForState = {
+      tempMessage = {
         ...tempMessageBase,
         recipientId: selectedConversation.data.id,
-        content: content, 
-      } as DirectMessage;
-
-      // 2. Save CIPHERTEXT to DB/Socket
-      messageToSave = {
-        ...tempMessageBase,
-        recipientId: selectedConversation.data.id,
-        content: finalContent, 
       } as DirectMessage;
     }
 
-    setMessages((prev) => [...prev, tempMessageForState]);
-    db.messages.put(messageToSave).catch(console.error);
+    setMessages((prev) => [...prev, tempMessage]);
     socket.emit(eventName, payload);
-    
     setTimeout(
       () =>
         scrollContainerRef.current?.scrollTo({
@@ -734,9 +473,7 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
   const handleDeleteMessage = async (messageId: number | string) => {
     if (!currentUser || !selectedConversation || !socket) return;
     const messageType = selectedConversation.type === "room" ? "group" : "dm";
-    const oldMessages = messages;
     setMessages((prev) => prev.filter((m) => m.id !== messageId));
-    await db.messages.delete(messageId);
     try {
       socket.emit("message:delete", {
         userId: currentUser.id,
@@ -745,52 +482,11 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
       });
     } catch (err) {
       setError(`failed : ${err}`);
-      setMessages(oldMessages);
     }
   };
 
-  const handleToggleReaction = async (
-    messageId: number | string,
-    emoji: string,
-  ) => {
-    if (!currentUser || !selectedConversation || !socket) return;
-    const messageType = selectedConversation.type === "room" ? "group" : "dm";
-    const calculateReactions = (msg: MessageType) => {
-      const existingReaction = msg.reactions?.find(
-        (r) => r.emoji === emoji && r.user.id === currentUser.id,
-      );
-      const reactions = msg.reactions || [];
-      return existingReaction
-        ? reactions.filter((r) => r.id !== existingReaction.id)
-        : [
-            ...reactions,
-            { id: crypto.randomUUID(), emoji, user: toSimpleUser(currentUser) },
-          ];
-    };
-
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === messageId
-          ? { ...msg, reactions: calculateReactions(msg) }
-          : msg,
-      ),
-    );
-    const msg = await db.messages.get(messageId);
-    if (msg)
-      await db.messages.update(messageId, {
-        reactions: calculateReactions(msg),
-      });
-
-    socket.emit("reaction:toggle", {
-      userId: currentUser.id,
-      emoji,
-      groupMessageId: messageType === "group" ? messageId : undefined,
-      directMessageId: messageType === "dm" ? messageId : undefined,
-    });
-  };
-
   if (!selectedConversation) return null;
-  if (isCacheLoading) return <ChatPanelSkeleton />;
+  if (isLoadingMessages && messages.length === 0) return <ChatPanelSkeleton />;
 
   const name = selectedConversation.data.name;
   const rawImageUrl =
@@ -886,7 +582,7 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
                 currentUser={toSimpleUser(currentUser)}
                 selectedConversation={selectedConversation}
                 onDelete={handleDeleteMessage}
-                onToggleReaction={handleToggleReaction}
+                onToggleReaction={() => {}}
                 allowAnimations={allowAnimations}
               />
             )}
@@ -908,3 +604,4 @@ const ChatPanel: React.FC<ChatPanelProps> = () => {
 };
 
 export default ChatPanel;
+// }}}

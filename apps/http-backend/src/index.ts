@@ -13,7 +13,12 @@ const app = express();
 const PORT = process.env.HTTP_PORT || 3002;
 const SELF_URL = process.env.SERVER_LINK || `http://localhost:${PORT}`;
 
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:3000",
+  credentials: true,             
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.use(express.json());
 
 app.use("/user", userRoutes);
