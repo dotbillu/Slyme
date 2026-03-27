@@ -7,11 +7,14 @@ const prisma = new PrismaClient();
 
 const httpServer = createServer((req, res) => {
   if (req.url === "/health") {
-    res.end();
+    res.writeHead(200);
+    res.end("OK");
     return;
   }
-});
 
+  res.writeHead(200, { "Content-Type": "text/plain" });
+  res.end("WebSocket server running");
+});
 const io = new Server(httpServer, {
   cors: {
     origin: "*",
