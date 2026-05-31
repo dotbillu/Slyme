@@ -244,7 +244,7 @@ const Map = memo(
 
     const center: [number, number] = userLocation
       ? [userLocation.lat, userLocation.lng]
-      : [51.505, -0.09];
+      : [28.6139, 77.209];
 
     const icon = avatarUrl ? createAvatarIcon(avatarUrl) : fallbackIcon;
 

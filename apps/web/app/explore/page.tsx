@@ -166,14 +166,18 @@ export default function ExplorePage() {
 
   // Geolocation
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    const defaultLocation = { lat: 28.6139, lng: 77.209 };
+    if (!navigator.geolocation) {
+      setUserLocation(defaultLocation);
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) =>
         setUserLocation({
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
         }),
-      () => setUserLocation({ lat: 51.505, lng: -0.09 }),
+      () => setUserLocation(defaultLocation),
       { enableHighAccuracy: true },
     );
   }, []);
@@ -634,7 +638,7 @@ function RoomPanel({
       )}
 
       {/* Mobile — vaul Drawer */}
-      {isMobile && (
+      {isMobile && !showEdit && (
         <Drawer.Root
           open
           onOpenChange={(open) => {
@@ -644,6 +648,7 @@ function RoomPanel({
           <Drawer.Portal>
             <Drawer.Overlay className="fixed inset-0 z-[10000] bg-black/60" />
             <Drawer.Content className="fixed bottom-0 left-0 right-0 z-[10001] bg-zinc-950 rounded-t-2xl max-h-[85vh] flex flex-col outline-none overflow-hidden">
+              <Drawer.Title className="sr-only">{room.name}</Drawer.Title>
               <div className="flex justify-center pt-2 pb-1 shrink-0">
                 <div className="w-9 h-1 rounded-full bg-zinc-700" />
               </div>

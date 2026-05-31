@@ -5,9 +5,10 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { UserPublic } from "@/types/user";
-import { MapPin, Calendar, Award, Tag, Pencil, Camera, Loader2, Check, X } from "lucide-react";
+import { MapPin, Calendar, Award, Tag, Pencil, Camera, Loader2, Check, X, Settings, LogOut } from "lucide-react";
 import { useAuth } from "@/app/AuthProvider";
 import { updateProfile } from "@/services/user/service";
+import { signout } from "@/services/auth/service";
 
 type Tab = "recent" | "gigs" | "rooms";
 
@@ -84,6 +85,7 @@ export default function ProfileClient({ user: initialUser }: { user: UserPublic 
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [form, setForm] = useState({
     name: user.name || "",
@@ -97,6 +99,7 @@ export default function ProfileClient({ user: initialUser }: { user: UserPublic 
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (searchParams.get("mode") === "edit" && isOwner) {
@@ -107,6 +110,19 @@ export default function ProfileClient({ user: initialUser }: { user: UserPublic 
       window.history.replaceState({}, "", url.toString());
     }
   }, [searchParams, isOwner]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+
+    const handleClick = (event: MouseEvent) => {
+      if (!settingsRef.current?.contains(event.target as Node)) {
+        setSettingsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [settingsOpen]);
 
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,6 +178,17 @@ export default function ProfileClient({ user: initialUser }: { user: UserPublic 
     setIsEditing(false);
   };
 
+  const handleLogout = async () => {
+    setSettingsOpen(false);
+    try {
+      await signout();
+    } catch (err) {
+      console.error("Signout error:", err);
+    }
+    setAuthUser(null);
+    router.push("/signin");
+  };
+
   return (
     <div className="w-full min-h-screen bg-black text-white pb-20">
       <div className="h-56 w-full bg-zinc-900 relative group overflow-hidden">
@@ -206,12 +233,40 @@ export default function ProfileClient({ user: initialUser }: { user: UserPublic 
             </div>
 
             {isOwner && !isEditing && (
-              <button 
-                onClick={() => setIsEditing(true)}
-                className="mt-12 p-2 text-zinc-400 hover:text-white  transition "
-              >
-                <Pencil size={16} />
-              </button>
+              <div className="mt-12 relative flex flex-col items-end gap-1" ref={settingsRef}>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="p-2 text-zinc-400 hover:text-white transition"
+                  aria-label="Edit profile"
+                >
+                  <Pencil size={16} />
+                </button>
+                <button
+                  onClick={() => setSettingsOpen((open) => !open)}
+                  className="p-2 text-zinc-400 hover:text-white transition"
+                  aria-label="Profile settings"
+                >
+                  <Settings size={16} />
+                </button>
+
+                {settingsOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute top-full right-0 mt-2 w-36 rounded-xl bg-zinc-900 border border-zinc-800 shadow-xl shadow-black/40 overflow-hidden z-20"
+                  >
+                    <button
+                      onClick={handleLogout}
+                      className="w-full px-3 py-2.5 text-left text-sm text-white hover:bg-zinc-800 transition flex items-center gap-2"
+                    >
+                      <LogOut size={14} />
+                      Log out
+                    </button>
+                  </motion.div>
+                )}
+              </div>
             )}
             
             {isOwner && isEditing && (
